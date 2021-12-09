@@ -1,0 +1,135 @@
+#pragma once
+
+#include "ui_EntityView.h"
+
+#include <map>
+#include <string>
+#include "EntityListModel.h"
+struct mCore;
+#include "rapidjson/document.h"
+using std::string;
+
+namespace QGBA {
+
+class CoreController;
+
+class Reader {
+public:
+    Reader(mCore* core, uint addr): m_core(core), m_addr(addr) {
+    }
+
+    uint8_t read_u8();
+
+    int8_t read_s8() {
+        int8_t val = read_u8();
+        return val;
+    }
+
+    uint16_t read_u16();
+
+    int16_t read_s16() {
+        return read_u16();
+    }
+
+    uint32_t read_u32();
+
+    int32_t read_s32() {
+        return read_u32();
+    }
+
+    uint8_t read_bitfield(uint length);
+
+    uint m_addr;
+private:
+    mCore* m_core;
+    uint m_bitfield = 0;
+    uint m_bitfieldRemaining = 0;
+};
+
+
+enum Type {
+    STRUCT,
+    UNION,
+    PLAIN
+};
+
+struct Definition {
+    Type type;
+    std::vector<std::pair<std::string, Definition>> members;
+    std::string plainType;
+};
+
+enum EntryType {
+    NONE,
+    ERROR,
+    U8,
+    S8,
+    U16,
+    S16,
+    U32,
+    S32,
+    OBJECT,
+    ARRAY
+};
+
+enum Asdf{
+    TU_STRING,
+    TU_INT,
+    TU_FLOAT
+};
+
+struct Entry {
+    EntryType type;
+    // TODO somehow make this a union
+    std::string errorMessage;
+    uint8_t u8;
+    int8_t s8;
+    uint16_t u16;
+    int16_t s16;
+    uint32_t u32;
+    int32_t s32;
+    std::map<std::string, Entry> object;
+    std::vector<std::string> objectKeys;
+    std::vector<Entry> array;
+
+    /*Entry(const Entry& entry) : type(entry.type) {
+        switch(entry.type) {
+            case ERROR:
+                new(&value.errorMessage)(entry.value.errorMessage);
+                break;
+        }
+    }*/
+};
+
+
+class EntityView : public QWidget {
+Q_OBJECT
+
+public:
+    EntityView(std::shared_ptr<CoreController> controller, QWidget* parent = nullptr);
+public slots:
+    void update();
+private:
+    Definition buildDefinition(const rapidjson::Value& value);
+
+    Entry printVar(uint addr, const std::string& name, const std::string& type);
+    Entry readVar(Reader& reader, const std::string& type);
+    Entry readArray(Reader& reader, const std::string& type, uint count);
+    Entry readStruct(Reader& reader, const Definition& definition);
+    Entry readUnion(Reader& reader, const Definition& definition);
+    Entry readBitfield(Reader& reader, uint count);
+    QString printEntry(const Entry& entry, int indentation=0);
+    QString spaces(int indentation);
+
+
+
+    Ui::EntityView m_ui;
+    mCore* m_core = nullptr;
+    std::map<std::string, Definition> definitions;
+    EntityListModel m_model;
+    EntityData m_currentEntity = {0};
+};
+}
+
+
+
