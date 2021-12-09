@@ -155,7 +155,10 @@ set(SOURCE_FILES
 	Window.cpp
 	VFileDevice.cpp
 	VideoProxy.cpp
-	VideoView.cpp)
+	VideoView.cpp
+	tmc/EntityListModel.cpp
+	tmc/EntityView.cpp
+	)
 
 set(UI_FILES
 	AboutScreen.ui
@@ -189,7 +192,8 @@ set(UI_FILES
 	ShaderSelector.ui
 	ShortcutView.ui
 	TileView.ui
-	VideoView.ui)
+	VideoView.ui
+	tmc/EntityView.ui)
 
 set(GBA_SRC
 	BattleChipModel.cpp

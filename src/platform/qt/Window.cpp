@@ -63,6 +63,7 @@
 #include "TileView.h"
 #include "VideoProxy.h"
 #include "VideoView.h"
+#include "tmc/EntityView.h"
 
 #ifdef USE_DISCORD_RPC
 #include "DiscordCoordinator.h"
@@ -1682,6 +1683,8 @@ void Window::setupMenu(QMenuBar* menubar) {
 #if defined(USE_DEBUGGERS) || defined(ENABLE_SCRIPTING)
 	m_actions.addSeparator("tools");
 #endif
+	addGameAction(tr("View entities..."), "entityView", openControllerTView<EntityView>(), "tools", QKeySequence("Ctrl+E"));
+	m_actions.addSeparator("tools");
 
 	m_actions.addMenu(tr("Game state views"), "stateViews", "tools");
 	addGameAction(tr("View &palette..."), "paletteWindow", openControllerTView<PaletteView>(), "stateViews");
