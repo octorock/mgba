@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include "EntityListModel.h"
+#include "MemoryWatchModel.h"
 struct mCore;
 #include "rapidjson/document.h"
 using std::string;
@@ -109,6 +110,11 @@ public:
     EntityView(std::shared_ptr<CoreController> controller, QWidget* parent = nullptr);
 public slots:
     void update();
+    void slotCheatFullHealth();
+    void slotCheatNearlyDead();
+    void slotCheatAllHearts();
+    void slotCheatTeleport();
+    void slotAddMemoryWatch();
 private:
     Definition buildDefinition(const rapidjson::Value& value);
 
@@ -128,6 +134,8 @@ private:
     std::map<std::string, Definition> definitions;
     EntityListModel m_model;
     EntityData m_currentEntity = {0};
+    MemoryWatchModel m_memoryModel;
+    MemoryWatch m_currentWatch = {0};
 };
 }
 
