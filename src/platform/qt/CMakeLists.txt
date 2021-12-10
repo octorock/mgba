@@ -158,6 +158,7 @@ set(SOURCE_FILES
 	VideoView.cpp
 	tmc/EntityListModel.cpp
 	tmc/EntityView.cpp
+	tmc/MemoryWatchModel.cpp
 	)
 
 set(UI_FILES
