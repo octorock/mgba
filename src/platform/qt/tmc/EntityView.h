@@ -111,8 +111,8 @@ public slots:
     void slotAddMemoryWatch();
 private:
     Definition buildDefinition(const rapidjson::Value& value);
-
-    Entry printVar(uint addr, const std::string& name, const std::string& type);
+    
+    Entry readVar(uint addr, const std::string& type);
     Entry readVar(Reader& reader, const std::string& type);
     Entry readArray(Reader& reader, const std::string& type, uint count);
     Entry readStruct(Reader& reader, const Definition& definition);
@@ -130,6 +130,12 @@ private:
     EntityData m_currentEntity = {0};
     MemoryWatchModel m_memoryModel;
     MemoryWatch m_currentWatch = {0};
+    std::shared_ptr<CoreController> m_context = nullptr;
+    QImage m_backing;
+
+    QPen m_hitboxPen;
+    QPen m_circlePen;
+    QPen m_linePen;
 };
 }
 

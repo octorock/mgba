@@ -23,19 +23,32 @@
       <attribute name="title">
        <string>Entity Explorer</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="verticalLayout_8">
        <item>
         <widget class="QSplitter" name="splitter">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
-         <property name="opaqueResize">
-          <bool>true</bool>
-         </property>
          <property name="childrenCollapsible">
           <bool>false</bool>
          </property>
-         <widget class="QListView" name="entityLists"/>
+         <widget class="QWidget" name="">
+          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0">
+           <property name="sizeConstraint">
+            <enum>QLayout::SetDefaultConstraint</enum>
+           </property>
+           <item>
+            <widget class="QListView" name="entityLists"/>
+           </item>
+           <item>
+            <widget class="QLabel" name="labelGameView">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
          <widget class="QScrollArea" name="scrollArea">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -51,7 +64,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>428</width>
+             <width>426</width>
              <height>621</height>
             </rect>
            </property>
@@ -60,6 +73,9 @@
              <widget class="QLabel" name="entityInfo">
               <property name="text">
                <string>TextLabel</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
               </property>
              </widget>
             </item>
@@ -140,6 +156,9 @@
               </property>
               <property name="text">
                <string>TextLabel</string>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
               </property>
              </widget>
             </item>
