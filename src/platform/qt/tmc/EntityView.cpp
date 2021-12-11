@@ -26,8 +26,9 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 	connect(controller.get(), &CoreController::stateLoaded, this, &EntityView::update);
 	connect(controller.get(), &CoreController::rewound, this, &EntityView::update);
 
-	connect(m_ui.entityLists, &QAbstractItemView::clicked, this, [this](const QModelIndex& index) {
-        m_currentEntity = m_model.getEntity(index);
+	connect(m_ui.entityLists->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
+        m_currentEntity = m_model.getEntity(selection.indexes().first());
+        update();
 	});
 
     FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
@@ -52,8 +53,9 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 
     //// Memory Viewer
     connect(m_ui.pushButtonWatchMemory, &QPushButton::clicked, this, &EntityView::slotAddMemoryWatch);
-	connect(m_ui.listMemory, &QAbstractItemView::clicked, this, [this](const QModelIndex& index) {
-        m_currentWatch = m_memoryModel.getMemoryWatch(index);
+    connect(m_ui.listMemory->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
+        m_currentWatch = m_memoryModel.getMemoryWatch(selection.indexes().first());
+        update();
 	});
 
     //// Cheats
@@ -186,7 +188,7 @@ void EntityView::update() {
         } else {
             entity = readVar(reader, "Entity");
         }
-        QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n\n" + printEntry(entity);
+        QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n" + printEntry(entity);
         this->m_ui.entityInfo->setText(text);
     }
 
@@ -195,7 +197,7 @@ void EntityView::update() {
         Entry entity;
         Reader reader = Reader(m_core, m_currentWatch.addr);
         entity = readVar(reader, m_currentWatch.type);
-        QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n\n" + printEntry(entity);
+        QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n" + printEntry(entity);
         this->m_ui.labelMemory->setText(text);
     }
 
