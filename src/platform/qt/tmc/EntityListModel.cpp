@@ -3,7 +3,6 @@
 using namespace QGBA;
 
 EntityListModel::EntityListModel(QObject* parent): QAbstractListModel(parent) {
-
 }
 
 int EntityListModel::rowCount(const QModelIndex& parent) const {

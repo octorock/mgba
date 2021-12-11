@@ -3,7 +3,7 @@
 
 #include <mgba/core/core.h>
 #include <iostream>
-#include <QPainter>
+#include <QtGui/QPainter>
 
 #include "rapidjson/filereadstream.h"
 
@@ -13,7 +13,9 @@ using namespace QGBA;
 
 EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent), m_context(controller) {
     m_ui.setupUi(this);
-    m_ui.entityLists->setModel(&m_model);
+    m_ui.treeViewEntities->setModel(&m_model);
+    m_ui.treeViewEntities->expandAll();
+//    m_ui.entityLists->setModel(&m_model);
     m_ui.listMemory->setModel(&m_memoryModel);
 
     m_core = controller->thread()->core;
@@ -26,7 +28,7 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 	connect(controller.get(), &CoreController::stateLoaded, this, &EntityView::update);
 	connect(controller.get(), &CoreController::rewound, this, &EntityView::update);
 
-	connect(m_ui.entityLists->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
+	connect(m_ui.treeViewEntities->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
         m_currentEntity = m_model.getEntity(selection.indexes().first());
         update();
 	});
@@ -108,11 +110,11 @@ void EntityView::update() {
     Reader reader(m_core, 0x3003D70);
     Entry entityLists = readVar(reader, "LinkedList[9]");
 
-    QList<EntityData> entityList;
 
     uint listAddr = 0x3003d70;
     uint i = 0;
     for(auto it : entityLists.array) {
+        QList<EntityData> entityList;
         //std::vector<Entry> entities;
         uint32_t first = it.object["first"].u32;
         if (first != 0 && first != listAddr + 8 * i) {
@@ -161,7 +163,8 @@ void EntityView::update() {
 
                 entityData.kind = kind;
                 entityData.addr = next;
-                entityData.name = QString("[%1:%2] %3 %4").arg(QString::number(i), QString::number(j), kindStr, idStr);
+                entityData.name = QString("%1 %2").arg(kindStr, idStr);
+                //entityData.name = QString("[%1:%2] %3 %4").arg(QString::number(i), QString::number(j), kindStr, idStr);
                 entityList.append(entityData);
 
                 next = m_core->rawRead32(m_core, next+4, -1);
@@ -172,10 +175,10 @@ void EntityView::update() {
                 //std::cout << "LOADING..."<<i<<","<<j << " " << next << std::endl;
             } while (next != 0 && next != listAddr + 8*i);
         }
+        m_model.setEntities(i, entityList);
         i++;
     }
     //std::cout << "Setting" << std::endl;
-    m_model.setEntities(entityList);
 
 
     // Update currently selected entity
@@ -190,6 +193,8 @@ void EntityView::update() {
         }
         QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n" + printEntry(entity);
         this->m_ui.entityInfo->setText(text);
+    } else {
+        this->m_ui.entityInfo->setText("");
     }
 
     // Update current memory watch
@@ -199,6 +204,8 @@ void EntityView::update() {
         entity = readVar(reader, m_currentWatch.type);
         QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n" + printEntry(entity);
         this->m_ui.labelMemory->setText(text);
+    } else {
+        this->m_ui.labelMemory->setText("");
     }
 
 
