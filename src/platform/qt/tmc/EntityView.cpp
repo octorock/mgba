@@ -3,7 +3,7 @@
 
 #include <mgba/core/core.h>
 #include <iostream>
-
+#include <QPainter>
 
 #include "rapidjson/filereadstream.h"
 
@@ -11,7 +11,7 @@
 
 using namespace QGBA;
 
-EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent) {
+EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent), m_context(controller) {
     m_ui.setupUi(this);
     m_ui.entityLists->setModel(&m_model);
     m_ui.listMemory->setModel(&m_memoryModel);
@@ -61,6 +61,16 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
     connect(m_ui.pushButtonNearlyDead, &QPushButton::clicked, this, &EntityView::slotCheatNearlyDead);
     connect(m_ui.pushButtonAllHearts, &QPushButton::clicked, this, &EntityView::slotCheatAllHearts);
     connect(m_ui.pushButtonTeleport, &QPushButton::clicked, this, &EntityView::slotCheatTeleport);
+
+    // Setup pens
+    m_hitboxPen.setWidth(1);
+    m_hitboxPen.setColor(Qt::red);
+
+    m_circlePen.setWidth(1);
+    m_circlePen.setColor(Qt::red);
+
+    m_linePen.setWidth(2);
+    m_linePen.setColor(Qt::red);
 }
 
 Definition EntityView::buildDefinition(const rapidjson::Value& value) {
@@ -168,15 +178,15 @@ void EntityView::update() {
 
     // Update currently selected entity
     //std::cout << "current: " << m_currentEntity.addr << std::endl;
+    Entry entity;
     if (m_currentEntity.addr != 0) {
-        Entry entity;
         Reader reader = Reader(m_core, m_currentEntity.addr);
         if (m_currentEntity.kind == 9) {
             entity = readVar(reader, "Manager");
         } else {
             entity = readVar(reader, "Entity");
         }
-        QString text = printEntry(entity);
+        QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n\n" + printEntry(entity);
         this->m_ui.entityInfo->setText(text);
     }
 
@@ -185,9 +195,67 @@ void EntityView::update() {
         Entry entity;
         Reader reader = Reader(m_core, m_currentWatch.addr);
         entity = readVar(reader, m_currentWatch.type);
-        QString text = printEntry(entity);
+        QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n\n" + printEntry(entity);
         this->m_ui.labelMemory->setText(text);
     }
+
+
+    // Fetch game image
+    const color_t* buffer = m_context->drawContext();
+
+    int m_width = 240;
+    int m_height = 160;
+#ifdef COLOR_16_BIT
+#ifdef COLOR_5_6_5
+	m_backing = QImage(reinterpret_cast<const uchar*>(buffer), m_width, m_height, QImage::Format_RGB16);
+#else
+	m_backing = QImage(reinterpret_cast<const uchar*>(buffer), m_width, m_height, QImage::Format_RGB555);
+#endif
+#else
+	m_backing = QImage(reinterpret_cast<const uchar*>(buffer), m_width, m_height, QImage::Format_ARGB32);
+	m_backing = m_backing.convertToFormat(QImage::Format_RGB32);
+#endif
+#ifndef COLOR_5_6_5
+	m_backing = m_backing.rgbSwapped();
+#endif
+
+
+    // Paint on the image
+    if (m_currentEntity.addr != 0 && m_currentEntity.kind != 9 && entity.object["prev"].u32 != 0) {
+        // TODO create painter only once?
+        QPainter painter(&m_backing);
+
+        // Fetch gRoomControls
+        // TODO create unique read methods for stuff read often that just correctly fetch the needed values.
+        Reader reader = Reader(m_core, 0x3000BF0);
+        Entry roomControls = readVar(reader, "RoomControls");
+        int16_t scrollX = roomControls.object["roomScrollX"].s16;
+        int16_t scrollY = roomControls.object["roomScrollY"].s16;
+        int16_t entityX = entity.object["x"].object["HALF"].object["HI"].s16;
+        int16_t entityY = entity.object["y"].object["HALF"].object["HI"].s16 + entity.object["height"].object["HALF"].object["HI"].s16;
+
+        if (entity.object["hitbox"].u32 != 0) {
+            Entry hitbox = readVar(entity.object["hitbox"].u32, "Hitbox");
+            // Draw hitbox
+            painter.setPen(m_hitboxPen);
+            painter.drawRect(
+                entityX-scrollX+hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
+                entityY-scrollY+hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
+                hitbox.object["width"].u8*2,
+                hitbox.object["height"].u8*2
+                );
+        } else {
+            painter.setPen(m_circlePen);
+            int circleRadius = 8;
+            painter.drawEllipse(entityX-scrollX-circleRadius,entityY-scrollY-circleRadius, circleRadius*2,circleRadius*2);
+        }
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(m_linePen);
+        painter.drawLine(10,10,entityX-scrollX,entityY-scrollY);
+        painter.end();
+    }
+
+    m_ui.labelGameView->setPixmap(QPixmap::fromImage(m_backing));
 }
 
 Entry EntityView::readArray(Reader& reader, const std::string& type, uint count) {
@@ -308,6 +376,11 @@ Entry EntityView::readBitfield(Reader& reader, uint count) {
     return entry;
 }
 
+Entry EntityView::readVar(uint addr, const std::string& type) {
+    Reader reader = Reader(m_core, addr);
+    return readVar(reader, type);
+}
+
 Entry EntityView::readVar(Reader& reader, const std::string& type) {
     //std::cout << "read " << type << " @" << reader.m_addr << std::endl;
     if (type.find("*") != std::string::npos) {
@@ -369,14 +442,6 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
     Entry entry;
     entry.type = EntryType::ERROR;
     entry.errorMessage = "TODO: " + type + " not found";
-    return entry;
-}
-
-Entry EntityView::printVar(uint addr, const std::string& name, const std::string& type) {
-    Reader reader(m_core, addr);
-    Entry entry = readVar(reader, type);
-    //printf("%s", name.c_str());
-    printEntry(entry);
     return entry;
 }
 
