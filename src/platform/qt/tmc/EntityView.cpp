@@ -68,9 +68,9 @@ Definition EntityView::buildDefinition(const rapidjson::Value& value) {
     auto obj = value.GetObject();
     std::string type = obj["type"].GetString();
     if (type == "struct") {
-        definition.type = STRUCT;
+        definition.type = Type::STRUCT;
     } else if (type == "union") {
-        definition.type = UNION;
+        definition.type = Type::UNION;
     } else {
         std::cerr << "Unknown type " << type << std::endl;
     }
@@ -80,7 +80,7 @@ Definition EntityView::buildDefinition(const rapidjson::Value& value) {
         if (innerIter->value.IsString()) {
             //printf("%s\n", innerIter->obj.GetString());
             Definition innerDefinition;
-            innerDefinition.type = PLAIN;
+            innerDefinition.type = Type::PLAIN;
             innerDefinition.plainType = innerIter->value.GetString();
             definition.members.push_back(std::make_pair(innerIter->name.GetString(), innerDefinition));
         } else {
@@ -92,14 +92,9 @@ Definition EntityView::buildDefinition(const rapidjson::Value& value) {
 }
 
 void EntityView::update() {
-    /*uint16_t b = m_core->rawRead16(m_core, 0x03000000, -1);
-    printf("byte 0: %x\n", b);
-    b = m_core->rawRead16(m_core, 0x03000001, -1);
-    printf("byte 1: %x\n", b);
-    b = m_core->rawRead16(m_core, 0x03000002, -1);
-    printf("byte 2: %x\n\n", b);*/
-
-    Entry entityLists = printVar(0x3003D70, "gEntityLists", "LinkedList[9]");
+    // Read gEntityLists
+    Reader reader(m_core, 0x3003D70);
+    Entry entityLists = readVar(reader, "LinkedList[9]");
 
     QList<EntityData> entityList;
 
@@ -198,7 +193,7 @@ void EntityView::update() {
 Entry EntityView::readArray(Reader& reader, const std::string& type, uint count) {
     assert(count > 0);
     Entry result;
-    result.type = ARRAY;
+    result.type = EntryType::ARRAY;
     for (uint i = 0; i < count; i++) {
         result.array.push_back(readVar(reader, type));
     }
@@ -207,24 +202,24 @@ Entry EntityView::readArray(Reader& reader, const std::string& type, uint count)
 
 Entry EntityView::readStruct(Reader& reader, const Definition& definition) {
     Entry result;
-    result.type = OBJECT;
+    result.type = EntryType::OBJECT;
     for (auto it = definition.members.begin(); it != definition.members.end(); it++) {
         switch (it->second.type) {
-            case PLAIN:
+            case Type::PLAIN:
             {
                 Entry entry = readVar(reader, it->second.plainType);
                 result.object[it->first] = entry;
                 result.objectKeys.push_back(it->first);
                 break;
             }
-            case STRUCT:
+            case Type::STRUCT:
             {
                 Entry entry = readStruct(reader, it->second);
                 result.object[it->first] = entry;
                 result.objectKeys.push_back(it->first);
                 break;
             }
-            case UNION:
+            case Type::UNION:
             {
                 Entry entry = readUnion(reader, it->second);
                 result.object[it->first] = entry;
@@ -232,7 +227,7 @@ Entry EntityView::readStruct(Reader& reader, const Definition& definition) {
                 break;
             }
             default:
-                printf("UNHANDLED DEFINITION TYPE %d\n", it->second.type);
+                printf("UNHANDLED DEFINITION TYPE %d\n", static_cast<int>(it->second.type));
                 break;
         }
     }
@@ -241,7 +236,7 @@ Entry EntityView::readStruct(Reader& reader, const Definition& definition) {
 
 Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
     Entry result;
-    result.type = OBJECT;
+    result.type = EntryType::OBJECT;
     /*// Just read the first available type
     auto it = definition.members.begin();
     switch (it->second.type) {
@@ -275,21 +270,21 @@ Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
     for (auto it = definition.members.begin(); it != definition.members.end(); it++) {
         reader.m_addr = addr; // All union fields read from the same memory addr
         switch (it->second.type) {
-            case PLAIN:
+            case Type::PLAIN:
             {
                 Entry entry = readVar(reader, it->second.plainType);
                 result.object[it->first] = entry;
                 result.objectKeys.push_back(it->first);
                 break;
             }
-            case STRUCT:
+            case Type::STRUCT:
             {
                 Entry entry = readStruct(reader, it->second);
                 result.object[it->first] = entry;
                 result.objectKeys.push_back(it->first);
                 break;
             }
-            case UNION:
+            case Type::UNION:
             {
                 Entry entry = readUnion(reader, it->second);
                 result.object[it->first] = entry;
@@ -297,7 +292,7 @@ Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
                 break;
             }
             default:
-                printf("UNHANDLED DEFINITION TYPE %d\n", it->second.type);
+                printf("UNHANDLED DEFINITION TYPE %d\n", static_cast<int>(it->second.type));
                 break;
         }
     }
@@ -308,7 +303,7 @@ Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
 Entry EntityView::readBitfield(Reader& reader, uint count) {
     Entry entry;
     // TODO handle bitfields that don't fit into an u8?
-    entry.type = U8;
+    entry.type = EntryType::U8;
     entry.u8 = reader.read_bitfield(count);
     return entry;
 }
@@ -317,7 +312,7 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
     //std::cout << "read " << type << " @" << reader.m_addr << std::endl;
     if (type.find("*") != std::string::npos) {
         Entry entry;
-        entry.type = U32;
+        entry.type = EntryType::U32;
         entry.u32 = reader.read_u32();
         return entry;
     }
@@ -334,45 +329,45 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
     }
     if (type == "u8") {
         Entry entry;
-        entry.type = U8;
+        entry.type = EntryType::U8;
         entry.u8 = reader.read_u8();
         return entry;
     } else if (type == "s8") {
         Entry entry;
-        entry.type = S8;
+        entry.type = EntryType::S8;
         entry.s8 = reader.read_s8();
         return entry;
     } else if (type == "u16") {
         Entry entry;
-        entry.type = U16;
+        entry.type = EntryType::U16;
         entry.u16 = reader.read_u16();
         return entry;
     } else if (type == "s16") {
         Entry entry;
-        entry.type = S16;
+        entry.type = EntryType::S16;
         entry.s16 = reader.read_s16();
         return entry;
     } else if (type == "u32") {
         Entry entry;
-        entry.type = U32;
+        entry.type = EntryType::U32;
         entry.u32 = reader.read_u32();
         return entry;
     } else if (type == "s32") {
         Entry entry;
-        entry.type = S32;
+        entry.type = EntryType::S32;
         entry.s32 = reader.read_s32();
         return entry;
     }
 
     if (definitions.count(type) > 0) {
-        if (definitions[type].type == STRUCT) {
+        if (definitions[type].type == Type::STRUCT) {
             return readStruct(reader, definitions[type]);
-        } else if (definitions[type].type == UNION) {
+        } else if (definitions[type].type == Type::UNION) {
             return readUnion(reader, definitions[type]);
         }
     }
     Entry entry;
-    entry.type = ERROR;
+    entry.type = EntryType::ERROR;
     entry.errorMessage = "TODO: " + type + " not found";
     return entry;
 }
@@ -389,23 +384,23 @@ Entry EntityView::printVar(uint addr, const std::string& name, const std::string
 QString EntityView::printEntry(const Entry& entry, int indentation) {
     //printf("-%d-", entry.type);
     switch (entry.type) {
-        case NONE:
+        case EntryType::NONE:
             return "NONE";
-        case ERROR:
+        case EntryType::ERROR:
             return QString("ERROR: %1").arg(QString(entry.errorMessage.c_str()));
-        case U8:
+        case EntryType::U8:
             return QString("0x%1").arg(entry.u8, 1, 16);
-        case S8:
+        case EntryType::S8:
             return QString("0x%1").arg(entry.s8, 1, 16);
-        case U16:
+        case EntryType::U16:
             return QString("0x%1").arg(entry.u16, 1, 16);
-        case S16:
+        case EntryType::S16:
             return QString("0x%1").arg(entry.s16, 1, 16);
-        case U32:
+        case EntryType::U32:
             return QString("0x%1").arg(entry.u32, 1, 16);
-        case S32:
+        case EntryType::S32:
             return QString("0x%1").arg(entry.s32, 1, 16);
-        case OBJECT:
+        case EntryType::OBJECT:
         {
             QString result = "{\n"+spaces(indentation+2);
             //for (auto it = entry.object.begin(); it != entry.object.end(); it++) {
@@ -421,11 +416,10 @@ QString EntityView::printEntry(const Entry& entry, int indentation) {
             }
             return result + "\n" + spaces(indentation)+"}";
         }
-            break;
-        case ARRAY:
+        case EntryType::ARRAY:
         {
             QString result = "[\n"+spaces(indentation+2);
-            for (int i = 0; i < entry.array.size(); i++) {
+            for (size_t i = 0; i < entry.array.size(); i++) {
                 if (i != 0) {
                     result += ", \n" + spaces(indentation+2);
                 }
@@ -433,10 +427,8 @@ QString EntityView::printEntry(const Entry& entry, int indentation) {
             }
             return result +"\n" + spaces(indentation)+ "]";
         }
-            break;
         default:
-            return QString("TODO %1\n").arg(entry.type);
-            break;
+            return QString("No string conversion defined for EntryType %1").arg(static_cast<int>(entry.type));
     }
 }
 

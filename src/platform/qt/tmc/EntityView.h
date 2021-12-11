@@ -16,7 +16,7 @@ class CoreController;
 
 class Reader {
 public:
-    Reader(mCore* core, uint addr): m_core(core), m_addr(addr) {
+    Reader(mCore* core, uint addr): m_addr(addr), m_core(core) {
     }
 
     uint8_t read_u8();
@@ -48,7 +48,7 @@ private:
 };
 
 
-enum Type {
+enum class Type {
     STRUCT,
     UNION,
     PLAIN
@@ -60,7 +60,7 @@ struct Definition {
     std::string plainType;
 };
 
-enum EntryType {
+enum class EntryType {
     NONE,
     ERROR,
     U8,
@@ -71,12 +71,6 @@ enum EntryType {
     S32,
     OBJECT,
     ARRAY
-};
-
-enum Asdf{
-    TU_STRING,
-    TU_INT,
-    TU_FLOAT
 };
 
 struct Entry {
