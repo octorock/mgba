@@ -4,7 +4,7 @@
 
 #include <map>
 #include <string>
-#include "EntityListModel.h"
+#include "EntityTreeModel.h"
 #include "MemoryWatchModel.h"
 struct mCore;
 #include "rapidjson/document.h"
@@ -126,7 +126,7 @@ private:
     Ui::EntityView m_ui;
     mCore* m_core = nullptr;
     std::map<std::string, Definition> definitions;
-    EntityListModel m_model;
+    EntityTreeModel m_model;
     EntityData m_currentEntity = {0};
     MemoryWatchModel m_memoryModel;
     MemoryWatch m_currentWatch = {0};

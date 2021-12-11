@@ -38,7 +38,7 @@
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
            <item>
-            <widget class="QListView" name="entityLists"/>
+            <widget class="QTreeView" name="treeViewEntities"/>
            </item>
            <item>
             <widget class="QLabel" name="labelGameView">

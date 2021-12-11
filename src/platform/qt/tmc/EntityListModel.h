@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QAbstractListModel>
+#include <QtCore/QAbstractListModel>
 
 namespace QGBA {
 
