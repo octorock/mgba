@@ -103,6 +103,8 @@ void EntityTreeModel::setEntities(int listIndex, QList<EntityData> entities) {
     
     //std::cout << "data " << listIndex << ": " << entities.count() << "/" << entities.length() << std::endl;
     // TODO
+
+    // dataChanged only works with changes of the data, but for adding and removing, we need to call layoutChanged? https://stackoverflow.com/a/41536459
     //emit dataChanged(createIndex(listIndex, 0, nullptr), createIndex(listIndex,1, nullptr));
     //emit dataChanged(createIndex(0, 0, (void*)(listIndex+1)), createIndex(entities.length()-1,0, (void*)(listIndex+1)));
     //endResetModel();

@@ -160,6 +160,7 @@ set(SOURCE_FILES
 	tmc/EntityView.cpp
 	tmc/MemoryWatchModel.cpp
 	tmc/EntityTreeModel.cpp
+	tmc/DetailsTreeModel.cpp
 	)
 
 set(UI_FILES

@@ -15,8 +15,12 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
     m_ui.setupUi(this);
     m_ui.treeViewEntities->setModel(&m_model);
     m_ui.treeViewEntities->expandAll();
+    m_ui.treeViewEntityDetails->setModel(&m_entityDetailsModel);
+    m_ui.treeViewEntityDetails->expandAll();
 //    m_ui.entityLists->setModel(&m_model);
     m_ui.listMemory->setModel(&m_memoryModel);
+    m_ui.treeViewMemoryDetails->setModel(&m_memoryDetailsModel);
+    m_ui.treeViewMemoryDetails->expandAll();
 
     m_core = controller->thread()->core;
 
@@ -32,11 +36,12 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
         m_currentEntity = m_model.getEntity(selection.indexes().first());
         update();
 	});
+    connect(&m_entityDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
 
     FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     if (!fp) {
         std::cerr << "COULD NOT OPEN structs.json! Please fix path." << std::endl;
-        m_ui.entityInfo->setText("COULD NOT OPEN structs.json! Please fix path.");
+        showError("COULD NOT OPEN structs.json! Please fix path.");
         return;
     }
     char readBuffer[65536];
@@ -59,6 +64,9 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
         m_currentWatch = m_memoryModel.getMemoryWatch(selection.indexes().first());
         update();
 	});
+    connect(&m_memoryDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
+
+    // TODO add button to copy the "json" representation
 
     //// Cheats
     connect(m_ui.pushButtonFullHealth, &QPushButton::clicked, this, &EntityView::slotCheatFullHealth);
@@ -186,26 +194,33 @@ void EntityView::update() {
     Entry entity;
     if (m_currentEntity.addr != 0) {
         Reader reader = Reader(m_core, m_currentEntity.addr);
+        std::string type = "Entity";
         if (m_currentEntity.kind == 9) {
-            entity = readVar(reader, "Manager");
-        } else {
-            entity = readVar(reader, "Entity");
+           type = "Manager";
         }
-        QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n" + printEntry(entity);
-        this->m_ui.entityInfo->setText(text);
+        entity = readVar(reader, "Entity");
+        // QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n" + printEntry(entity);
+        //this->m_ui.entityInfo->setText(text);
+        this->m_entityDetailsModel.setEntry(type, entity);
+        //m_ui.treeViewEntityDetails->expandAll();
     } else {
-        this->m_ui.entityInfo->setText("");
+        entity.type = EntryType::NONE;
+        this->m_entityDetailsModel.setEntry("", entity);
+        //this->m_ui.entityInfo->setText("");
     }
 
     // Update current memory watch
+    //Entry entity;
     if (m_currentWatch.addr != 0) {
-        Entry entity;
+        Entry entry;
         Reader reader = Reader(m_core, m_currentWatch.addr);
-        entity = readVar(reader, m_currentWatch.type);
-        QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n" + printEntry(entity);
-        this->m_ui.labelMemory->setText(text);
+        entry = readVar(reader, m_currentWatch.type);
+        //QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n" + printEntry(entry);
+        this->m_memoryDetailsModel.setEntry(m_currentWatch.type, entry);
     } else {
-        this->m_ui.labelMemory->setText("");
+        Entry entry;
+        entry.type = EntryType::NONE;
+        this->m_memoryDetailsModel.setEntry("", entry);
     }
 
 
@@ -379,6 +394,7 @@ Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
 
 Entry EntityView::readBitfield(Reader& reader, uint count) {
     Entry entry;
+    entry.addr = reader.m_addr; // TODO correctly handle editing for bitfields!
     // TODO handle bitfields that don't fit into an u8?
     entry.type = EntryType::U8;
     entry.u8 = reader.read_bitfield(count);
@@ -394,6 +410,7 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
     //std::cout << "read " << type << " @" << reader.m_addr << std::endl;
     if (type.find("*") != std::string::npos) {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::U32;
         entry.u32 = reader.read_u32();
         return entry;
@@ -411,31 +428,37 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
     }
     if (type == "u8") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::U8;
         entry.u8 = reader.read_u8();
         return entry;
     } else if (type == "s8") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::S8;
         entry.s8 = reader.read_s8();
         return entry;
     } else if (type == "u16") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::U16;
         entry.u16 = reader.read_u16();
         return entry;
     } else if (type == "s16") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::S16;
         entry.s16 = reader.read_s16();
         return entry;
     } else if (type == "u32") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::U32;
         entry.u32 = reader.read_u32();
         return entry;
     } else if (type == "s32") {
         Entry entry;
+        entry.addr = reader.m_addr;
         entry.type = EntryType::S32;
         entry.s32 = reader.read_s32();
         return entry;
@@ -1211,4 +1234,30 @@ void EntityView::slotAddMemoryWatch() {
     m_ui.lineEditName->setText("");
     m_ui.lineEditAddress->setText("");
     m_ui.lineEditType->setText("");
+}
+
+void EntityView::showError(const QString& message) {
+    (void) message;
+}
+
+void EntityView::slotChangeEntry(const Entry& entry, int value) {
+    switch (entry.type) {
+        case EntryType::U8:
+        case EntryType::S8:
+            m_core->rawWrite8(m_core, entry.addr, -1, value);
+            break;
+        case EntryType::U16:
+        case EntryType::S16:
+            m_core->rawWrite16(m_core, entry.addr, -1, value);
+            break;
+        case EntryType::U32:
+        case EntryType::S32:
+            m_core->rawWrite32(m_core, entry.addr, -1, value);
+            break;
+        case EntryType::NONE:
+        case EntryType::ERROR:
+        case EntryType::OBJECT:
+        case EntryType::ARRAY:
+            std::cerr << "Cannot change this datatype" << std::endl;
+    }
 }

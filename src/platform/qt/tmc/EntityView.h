@@ -2,13 +2,13 @@
 
 #include "ui_EntityView.h"
 
-#include <map>
-#include <string>
 #include "EntityTreeModel.h"
 #include "MemoryWatchModel.h"
-struct mCore;
 #include "rapidjson/document.h"
-using std::string;
+#include "Entry.h"
+#include "DetailsTreeModel.h"
+
+struct mCore;
 
 namespace QGBA {
 
@@ -48,54 +48,6 @@ private:
 };
 
 
-enum class Type {
-    STRUCT,
-    UNION,
-    PLAIN
-};
-
-struct Definition {
-    Type type;
-    std::vector<std::pair<std::string, Definition>> members;
-    std::string plainType;
-};
-
-enum class EntryType {
-    NONE,
-    ERROR,
-    U8,
-    S8,
-    U16,
-    S16,
-    U32,
-    S32,
-    OBJECT,
-    ARRAY
-};
-
-struct Entry {
-    EntryType type;
-    // TODO somehow make this a union
-    std::string errorMessage;
-    uint8_t u8;
-    int8_t s8;
-    uint16_t u16;
-    int16_t s16;
-    uint32_t u32;
-    int32_t s32;
-    std::map<std::string, Entry> object;
-    std::vector<std::string> objectKeys;
-    std::vector<Entry> array;
-
-    /*Entry(const Entry& entry) : type(entry.type) {
-        switch(entry.type) {
-            case ERROR:
-                new(&value.errorMessage)(entry.value.errorMessage);
-                break;
-        }
-    }*/
-};
-
 
 class EntityView : public QWidget {
 Q_OBJECT
@@ -109,6 +61,7 @@ public slots:
     void slotCheatAllHearts();
     void slotCheatTeleport();
     void slotAddMemoryWatch();
+    void slotChangeEntry(const Entry& entry, int value);
 private:
     Definition buildDefinition(const rapidjson::Value& value);
     
@@ -120,15 +73,17 @@ private:
     Entry readBitfield(Reader& reader, uint count);
     QString printEntry(const Entry& entry, int indentation=0);
     QString spaces(int indentation);
-
+    void showError(const QString& message);
 
 
     Ui::EntityView m_ui;
     mCore* m_core = nullptr;
     std::map<std::string, Definition> definitions;
     EntityTreeModel m_model;
+    DetailsTreeModel m_entityDetailsModel;
     EntityData m_currentEntity = {0};
     MemoryWatchModel m_memoryModel;
+    DetailsTreeModel m_memoryDetailsModel;
     MemoryWatch m_currentWatch = {0};
     std::shared_ptr<CoreController> m_context = nullptr;
     QImage m_backing;
