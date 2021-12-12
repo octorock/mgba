@@ -59,12 +59,21 @@ public slots:
     void slotCheatFullHealth();
     void slotCheatNearlyDead();
     void slotCheatAllHearts();
-    void slotCheatTeleport();
+    void slotCheatWarp();
     void slotAddMemoryWatch();
     void slotChangeEntry(const Entry& entry, int value);
+    void slotRightClickGameView(const QPoint& pos);
+    void slotGameViewTeleport();
+    void slotUnsetCamera();
+    void slotRightClickEntityDetails(const QPoint& pos);
+    void slotRightClickMemoryDetails(const QPoint& pos);
+    void slotDetailsCopyAddress();
+    void slotDetailsCopyValue();
+    void slotRightClickEntityLists(const QPoint& pos);
+    void slotSetAsCameraTarget();
 private:
     Definition buildDefinition(const rapidjson::Value& value);
-    
+
     Entry readVar(uint addr, const std::string& type);
     Entry readVar(Reader& reader, const std::string& type);
     Entry readArray(Reader& reader, const std::string& type, uint count);
@@ -74,7 +83,7 @@ private:
     QString printEntry(const Entry& entry, int indentation=0);
     QString spaces(int indentation);
     void showError(const QString& message);
-
+    void showDetailsContextMenu(const QPoint& pos);
 
     Ui::EntityView m_ui;
     mCore* m_core = nullptr;
@@ -91,6 +100,10 @@ private:
     QPen m_hitboxPen;
     QPen m_circlePen;
     QPen m_linePen;
+    QPoint m_currentGameViewClick;
+    bool m_detailsMemoryClicked;
+    Entry m_currentDetailsClick;
+    EntityData m_currentEntityClick;
 };
 }
 

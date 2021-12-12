@@ -4,6 +4,10 @@
 #include <mgba/core/core.h>
 #include <iostream>
 #include <QtGui/QPainter>
+#include <QtWidgets/QMenu>
+#include <QtWidgets/QMessageBox>
+#include <QApplication>
+#include <QClipboard>
 
 #include "rapidjson/filereadstream.h"
 
@@ -13,32 +17,10 @@ using namespace QGBA;
 
 EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent), m_context(controller) {
     m_ui.setupUi(this);
-    m_ui.treeViewEntities->setModel(&m_model);
-    m_ui.treeViewEntities->expandAll();
-    m_ui.treeViewEntityDetails->setModel(&m_entityDetailsModel);
-    m_ui.treeViewEntityDetails->expandAll();
-//    m_ui.entityLists->setModel(&m_model);
-    m_ui.listMemory->setModel(&m_memoryModel);
-    m_ui.treeViewMemoryDetails->setModel(&m_memoryDetailsModel);
-    m_ui.treeViewMemoryDetails->expandAll();
 
     m_core = controller->thread()->core;
 
-    // Automatically update contents
-	connect(controller.get(), &CoreController::stopping, this, &QWidget::close);
-
-	connect(controller.get(), &CoreController::frameAvailable, this, &EntityView::update);
-	connect(controller.get(), &CoreController::paused, this, &EntityView::update);
-	connect(controller.get(), &CoreController::stateLoaded, this, &EntityView::update);
-	connect(controller.get(), &CoreController::rewound, this, &EntityView::update);
-
-	connect(m_ui.treeViewEntities->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
-        m_currentEntity = m_model.getEntity(selection.indexes().first());
-        update();
-	});
-    connect(&m_entityDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
-
-    FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
+FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     if (!fp) {
         std::cerr << "COULD NOT OPEN structs.json! Please fix path." << std::endl;
         showError("COULD NOT OPEN structs.json! Please fix path.");
@@ -58,22 +40,34 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
         definitions[name] = definition;
     }
 
-    //// Memory Viewer
-    connect(m_ui.pushButtonWatchMemory, &QPushButton::clicked, this, &EntityView::slotAddMemoryWatch);
-    connect(m_ui.listMemory->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
-        m_currentWatch = m_memoryModel.getMemoryWatch(selection.indexes().first());
+    // Automatically update contents
+	connect(controller.get(), &CoreController::stopping, this, &QWidget::close);
+
+	connect(controller.get(), &CoreController::frameAvailable, this, &EntityView::update);
+	connect(controller.get(), &CoreController::paused, this, &EntityView::update);
+	connect(controller.get(), &CoreController::stateLoaded, this, &EntityView::update);
+	connect(controller.get(), &CoreController::rewound, this, &EntityView::update);
+
+    //// Entity Explorer
+    m_ui.treeViewEntities->setModel(&m_model);
+    m_ui.treeViewEntities->expandAll();
+    m_ui.treeViewEntityDetails->setModel(&m_entityDetailsModel);
+    m_ui.treeViewEntityDetails->expandAll();
+
+	connect(m_ui.treeViewEntities->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
+        m_currentEntity = m_model.getEntity(selection.indexes().first());
         update();
 	});
-    connect(&m_memoryDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
+    connect(&m_entityDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
+    m_ui.treeViewEntityDetails->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.treeViewEntityDetails, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickEntityDetails);
 
-    // TODO add button to copy the "json" representation
+    m_ui.treeViewEntities->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.treeViewEntities, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickEntityLists);
 
-    //// Cheats
-    connect(m_ui.pushButtonFullHealth, &QPushButton::clicked, this, &EntityView::slotCheatFullHealth);
-    connect(m_ui.pushButtonNearlyDead, &QPushButton::clicked, this, &EntityView::slotCheatNearlyDead);
-    connect(m_ui.pushButtonAllHearts, &QPushButton::clicked, this, &EntityView::slotCheatAllHearts);
-    connect(m_ui.pushButtonTeleport, &QPushButton::clicked, this, &EntityView::slotCheatTeleport);
-
+    // Game View
+    m_ui.labelGameView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.labelGameView, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickGameView);
     // Setup pens
     m_hitboxPen.setWidth(1);
     m_hitboxPen.setColor(Qt::red);
@@ -83,6 +77,30 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 
     m_linePen.setWidth(2);
     m_linePen.setColor(Qt::red);
+
+    //// Memory Viewer
+    m_ui.listMemory->setModel(&m_memoryModel);
+    m_ui.treeViewMemoryDetails->setModel(&m_memoryDetailsModel);
+    m_ui.treeViewMemoryDetails->expandAll();
+
+    connect(m_ui.pushButtonWatchMemory, &QPushButton::clicked, this, &EntityView::slotAddMemoryWatch);
+    connect(m_ui.listMemory->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
+        m_currentWatch = m_memoryModel.getMemoryWatch(selection.indexes().first());
+        update();
+	});
+    connect(&m_memoryDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
+    m_ui.treeViewMemoryDetails->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.treeViewMemoryDetails, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickMemoryDetails);
+    // TODO add button to copy the "json" representation
+
+    //// Cheats
+    connect(m_ui.pushButtonFullHealth, &QPushButton::clicked, this, &EntityView::slotCheatFullHealth);
+    connect(m_ui.pushButtonNearlyDead, &QPushButton::clicked, this, &EntityView::slotCheatNearlyDead);
+    connect(m_ui.pushButtonAllHearts, &QPushButton::clicked, this, &EntityView::slotCheatAllHearts);
+    connect(m_ui.pushButtonWarp, &QPushButton::clicked, this, &EntityView::slotCheatWarp);
+    connect(m_ui.pushButtonUnsetCamera, &QPushButton::clicked, this, &EntityView::slotUnsetCamera);
+
+
 }
 
 Definition EntityView::buildDefinition(const rapidjson::Value& value) {
@@ -198,7 +216,7 @@ void EntityView::update() {
         if (m_currentEntity.kind == 9) {
            type = "Manager";
         }
-        entity = readVar(reader, "Entity");
+        entity = readVar(reader, type);
         // QString text = (m_currentEntity.kind == 9 ? "Manager " : "Entity ") + QString("0x%1").arg(m_currentEntity.addr, 1, 16) + "\n" + printEntry(entity);
         //this->m_ui.entityInfo->setText(text);
         this->m_entityDetailsModel.setEntry(type, entity);
@@ -219,6 +237,7 @@ void EntityView::update() {
         this->m_memoryDetailsModel.setEntry(m_currentWatch.type, entry);
     } else {
         Entry entry;
+        entry.addr = 0;
         entry.type = EntryType::NONE;
         this->m_memoryDetailsModel.setEntry("", entry);
     }
@@ -285,6 +304,7 @@ void EntityView::update() {
 Entry EntityView::readArray(Reader& reader, const std::string& type, uint count) {
     assert(count > 0);
     Entry result;
+    result.addr = reader.m_addr;
     result.type = EntryType::ARRAY;
     for (uint i = 0; i < count; i++) {
         result.array.push_back(readVar(reader, type));
@@ -294,6 +314,7 @@ Entry EntityView::readArray(Reader& reader, const std::string& type, uint count)
 
 Entry EntityView::readStruct(Reader& reader, const Definition& definition) {
     Entry result;
+    result.addr = reader.m_addr;
     result.type = EntryType::OBJECT;
     for (auto it = definition.members.begin(); it != definition.members.end(); it++) {
         switch (it->second.type) {
@@ -328,6 +349,7 @@ Entry EntityView::readStruct(Reader& reader, const Definition& definition) {
 
 Entry EntityView::readUnion(Reader& reader, const Definition& definition) {
     Entry result;
+    result.addr = reader.m_addr;
     result.type = EntryType::OBJECT;
     /*// Just read the first available type
     auto it = definition.members.begin();
@@ -1186,7 +1208,7 @@ std::map<std::string, WarpPoint> warpPoints = {
     {"a9r1", {9, 1, 120, 152, 1 }}
 };
 
-void EntityView::slotCheatTeleport() {
+void EntityView::slotCheatWarp() {
     // https://github.com/Straylite/MinishCap-Command-Box/blob/master/commands/warp.lua
     int area = m_ui.spinBoxArea->value();
     int room = m_ui.spinBoxRoom->value();
@@ -1237,10 +1259,11 @@ void EntityView::slotAddMemoryWatch() {
 }
 
 void EntityView::showError(const QString& message) {
-    (void) message;
+    QMessageBox::critical(this, "Error", message);
 }
 
 void EntityView::slotChangeEntry(const Entry& entry, int value) {
+    printf("Set %x to %x\n", entry.addr, value);
     switch (entry.type) {
         case EntryType::U8:
         case EntryType::S8:
@@ -1260,4 +1283,127 @@ void EntityView::slotChangeEntry(const Entry& entry, int value) {
         case EntryType::ARRAY:
             std::cerr << "Cannot change this datatype" << std::endl;
     }
+}
+
+void EntityView::slotRightClickGameView(const QPoint& pos) {
+    QMenu menu(this);
+    menu.addAction("Teleport here", this, &EntityView::slotGameViewTeleport);
+    // menu.addAction("Select entity"); // TODO
+    // std::cout << pos.x() << ", " << pos.y() << std::endl;
+    m_currentGameViewClick = pos;
+    menu.exec(m_ui.labelGameView->mapToGlobal(pos));
+}
+
+void EntityView::slotGameViewTeleport() {
+    printf("Teleport\n");
+    int roomScrollX = m_core->rawRead16(m_core, 0x3000bfa, -1);
+    int roomScrollY = m_core->rawRead16(m_core, 0x3000bfc, -1);
+    printf("scroll %x, %x\n", roomScrollX, roomScrollY);
+    int newX = roomScrollX + m_currentGameViewClick.x();
+    int newY = roomScrollY + m_currentGameViewClick.y();
+    printf("%x, %x\n", newX, newY);
+    m_core->rawWrite16(m_core, 0x300118e, -1, newX);
+    m_core->rawWrite16(m_core, 0x3001192, -1, newY);
+}
+
+void EntityView::slotUnsetCamera() {
+    // gRoomControls.cameraTarget = 0
+    m_core->rawWrite32(m_core, 0x3000c20, -1, 0);
+}
+
+void EntityView::slotRightClickEntityDetails(const QPoint& pos) {
+    m_detailsMemoryClicked = false;
+    QModelIndex index = m_ui.treeViewEntityDetails->indexAt(pos);
+    if (index.isValid()) {
+        m_currentDetailsClick = m_entityDetailsModel.getEntry(index);
+        if (m_currentDetailsClick.type != EntryType::NONE && m_currentDetailsClick.type != EntryType::ERROR) {
+
+            showDetailsContextMenu(m_ui.treeViewEntityDetails->viewport()->mapToGlobal(pos));
+        }
+    }
+}
+
+void EntityView::slotRightClickMemoryDetails(const QPoint& pos) {
+    m_detailsMemoryClicked = true;
+    QModelIndex index = m_ui.treeViewMemoryDetails->indexAt(pos);
+    if (index.isValid()) {
+        m_currentDetailsClick = m_memoryDetailsModel.getEntry(index);
+        if (m_currentDetailsClick.type != EntryType::NONE && m_currentDetailsClick.type != EntryType::ERROR) {
+            showDetailsContextMenu(m_ui.treeViewMemoryDetails->viewport()->mapToGlobal(pos));
+        }
+    }
+}
+
+void EntityView::showDetailsContextMenu(const QPoint& pos) {
+    QMenu menu(this);
+    menu.addAction("Copy Address", this, &EntityView::slotDetailsCopyAddress);
+    switch (m_currentDetailsClick.type) {
+        case EntryType::U8:
+        case EntryType::S8:
+        case EntryType::U16:
+        case EntryType::S16:
+        case EntryType::U32:
+        case EntryType::S32:
+            menu.addAction("Copy Value", this, &EntityView::slotDetailsCopyValue);
+            break;
+        default:
+            break;
+    }
+    menu.exec(pos);
+}
+
+void EntityView::slotDetailsCopyAddress() {
+    QApplication::clipboard()->setText(QString("0x%1").arg(m_currentDetailsClick.addr, 1, 16));
+}
+void EntityView::slotDetailsCopyValue() {
+    int value = 0;
+    bool copy = false;
+    switch (m_currentDetailsClick.type) {
+        case EntryType::U8:
+            value = m_currentDetailsClick.u8;
+            copy = true;
+            break;
+        case EntryType::S8:
+            value = m_currentDetailsClick.s8;
+            copy = true;
+            break;
+        case EntryType::U16:
+            value = m_currentDetailsClick.u16;
+            copy = true;
+            break;
+        case EntryType::S16:
+            value = m_currentDetailsClick.s16;
+            copy = true;
+            break;
+        case EntryType::U32:
+            value = m_currentDetailsClick.u32;
+            copy = true;
+            break;
+        case EntryType::S32:
+            value = m_currentDetailsClick.s32;
+            copy = true;
+            break;
+        default:
+            break;
+    }
+    if (copy) {
+        QApplication::clipboard()->setText(QString("0x%1").arg(value, 1, 16));
+    }
+}
+
+void EntityView::slotRightClickEntityLists(const QPoint& pos) {
+     QModelIndex index = m_ui.treeViewEntities->indexAt(pos);
+    if (index.isValid()) {
+        m_currentEntityClick = m_model.getEntity(index);
+        if (m_currentEntityClick.addr != 0 && m_currentEntityClick.kind != 9) {
+            QMenu menu(this);
+            menu.addAction("Set as Camera Target", this, &EntityView::slotSetAsCameraTarget);
+            menu.exec(m_ui.treeViewEntities->viewport()->mapToGlobal(pos));
+        }
+    }
+}
+
+void EntityView::slotSetAsCameraTarget() {
+    // gRoomControls.cameraTarget = entity.addr
+    m_core->rawWrite32(m_core, 0x3000c20, -1, m_currentEntityClick.addr);
 }

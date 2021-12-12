@@ -20,17 +20,17 @@ TreeItem::TreeItem(const QString& key, Entry entry, TreeItem* parent)
 			this->addChild(item);
 		}
 	} else if (parent == nullptr && entry.type != EntryType::NONE) {
-        // TODO need to add this as a child so it is editable
-        TreeItem* item = new TreeItem(key, entry, this);
-        this->addChild(item);
-    }
+		// TODO need to add this as a child so it is editable
+		TreeItem* item = new TreeItem(key, entry, this);
+		this->addChild(item);
+	}
 }
 
 TreeItem::~TreeItem() {
-    /*parentItem = nullptr;
-    for (const auto& child: childItems) {
-        child->parentItem = nullptr;
-    }*/
+	/*parentItem = nullptr;
+	for (const auto& child: childItems) {
+	    child->parentItem = nullptr;
+	}*/
 	qDeleteAll(childItems);
 }
 
@@ -51,7 +51,7 @@ int TreeItem::childCount() const {
 int TreeItem::childNumber() const {
 	if (parentItem) {
 		return parentItem->childItems.indexOf(const_cast<TreeItem*>(this));
-    }
+	}
 	return 0;
 }
 
@@ -103,7 +103,7 @@ QVariant TreeItem::data(int column) const {
 	case EntryType::OBJECT:
 		return "";
 	}
-    return "";
+	return "";
 	/*	if (column < 0 || column >= itemData.size())
 	        return QVariant();
 	    return itemData.at(column);*/
@@ -140,9 +140,9 @@ void TreeItem::updateEntry(const Entry& entry) {
 			child(i)->updateEntry(entry.array[i]);
 		}
 	} else if (parentItem == nullptr && entry.type != EntryType::NONE) {
-        // The only child is the one that is editable.
-        child(0)->updateEntry(entry);
-    }
+		// The only child is the one that is editable.
+		child(0)->updateEntry(entry);
+	}
 }
 
 DetailsTreeModel::DetailsTreeModel(QObject* parent)
@@ -200,25 +200,25 @@ Qt::ItemFlags DetailsTreeModel::flags(const QModelIndex& index) const {
 	if (!index.isValid())
 		return Qt::NoItemFlags;
 
-    if (index.column() != 1) {
-        return QAbstractItemModel::flags(index);
-    }
-    TreeItem* item = getItem(index);
-    switch (item->getEntry().type) {
-        case EntryType::U8:
-        case EntryType::S8:
-        case EntryType::U16:
-        case EntryType::S16:
-        case EntryType::U32:
-        case EntryType::S32:
-            return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
-        case EntryType::NONE:
-        case EntryType::ERROR:
-        case EntryType::OBJECT:
-        case EntryType::ARRAY:
-	        return QAbstractItemModel::flags(index);
-    }
-    return QAbstractItemModel::flags(index);
+	if (index.column() != 1) {
+		return QAbstractItemModel::flags(index);
+	}
+	TreeItem* item = getItem(index);
+	switch (item->getEntry().type) {
+	case EntryType::U8:
+	case EntryType::S8:
+	case EntryType::U16:
+	case EntryType::S16:
+	case EntryType::U32:
+	case EntryType::S32:
+		return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
+	case EntryType::NONE:
+	case EntryType::ERROR:
+	case EntryType::OBJECT:
+	case EntryType::ARRAY:
+		return QAbstractItemModel::flags(index);
+	}
+	return QAbstractItemModel::flags(index);
 }
 
 QModelIndex DetailsTreeModel::index(int row, int column, const QModelIndex& parent) const {
@@ -301,11 +301,11 @@ QVariant DetailsTreeModel::data(const QModelIndex& index, int role) const {
 void DetailsTreeModel::setEntry(const std::string& type, const Entry& entry) {
 	if (type != this->entryType) {
 		beginResetModel();
-		//std::cout << "Rebuild tree" << std::endl;
+		// std::cout << "Rebuild tree" << std::endl;
 		// Need to rebuild the tree
 
-        delete rootItem;
-        rootItem = new TreeItem(QString(type.c_str()), entry, nullptr);
+		delete rootItem;
+		rootItem = new TreeItem(QString(type.c_str()), entry, nullptr);
 		// if (entry.type == EntryType::OBJECT) {
 		//     rootItem->removeChildren(0, rootItem->childCount()); // clear
 		//     for ( auto& key : entry.objectKeys) {
@@ -364,9 +364,13 @@ QVariant DetailsTreeModel::headerData(int section, Qt::Orientation orientation, 
 	if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
 		if (rootItem) {
 			switch (section) {
-			case 0:
-				return rootItem->data(0);
-			case 1:
+			case 0: {
+				const Entry& entry = rootItem->getEntry();
+				if (entry.type != EntryType::NONE) {
+					return rootItem->data(0).toString() + QString(" 0x%1").arg(entry.addr, 1, 16);
+				}
+			} break;
+			case 1: {
 				const Entry& entry = rootItem->getEntry();
 				switch (entry.type) {
 				case EntryType::NONE:
@@ -376,13 +380,14 @@ QVariant DetailsTreeModel::headerData(int section, Qt::Orientation orientation, 
 				case EntryType::U8:
 				case EntryType::S8:
 				case EntryType::U16:
-    			case EntryType::S16:
+				case EntryType::S16:
 				case EntryType::U32:
 				case EntryType::S32:
 				case EntryType::ARRAY:
 				case EntryType::OBJECT:
 					return "Value";
 				}
+            }
 			}
 		}
 	}
@@ -390,29 +395,27 @@ QVariant DetailsTreeModel::headerData(int section, Qt::Orientation orientation, 
 	return QVariant();
 }
 
+bool DetailsTreeModel::setData(const QModelIndex& index, const QVariant& value, int role) {
+	if (role != Qt::EditRole)
+		return false;
 
-bool DetailsTreeModel::setData(const QModelIndex &index, const QVariant &value, int role)
-{
-    if (role != Qt::EditRole)
-        return false;
+	TreeItem* item = getItem(index);
+	bool ok;
+	int base = 10;
+	if (value.toString().startsWith("0x")) {
+		base = 16;
+	}
+	int intValue = value.toString().toUInt(&ok, base);
+	if (ok) {
+		const Entry& entry = item->getEntry();
+		emit entryChanged(entry, intValue);
+	}
+	return ok;
+	/*
+	//bool result = item->setData(index.column(), value);
 
-    TreeItem *item = getItem(index);
-    bool ok;
-    int base = 10;
-    if (value.toString().startsWith("0x")) {
-        base = 16;
-    }
-    int intValue = value.toString().toUInt(&ok, base);
-    if (ok) {
-        const Entry& entry = item->getEntry();
-        emit entryChanged(entry, intValue);
-    }
-    return ok;
-    /*
-    //bool result = item->setData(index.column(), value);
+	if (result)
+	    emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
 
-    if (result)
-        emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
-
-    return result;*/
+	return result;*/
 }
