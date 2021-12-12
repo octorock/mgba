@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>687</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,6 +16,12 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>1</verstretch>
+      </sizepolicy>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -23,7 +29,7 @@
       <attribute name="title">
        <string>Entity Explorer</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_8">
+      <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QSplitter" name="splitter">
          <property name="orientation">
@@ -176,6 +182,13 @@
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="checkBoxFreezeHealth">
+           <property name="text">
+            <string>Freeze Health</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
             <widget class="QLabel" name="label_2">
@@ -212,13 +225,20 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButtonTeleport">
+            <widget class="QPushButton" name="pushButtonWarp">
              <property name="text">
-              <string>Teleport</string>
+              <string>Warp</string>
              </property>
             </widget>
            </item>
           </layout>
+         </item>
+         <item alignment="Qt::AlignLeft">
+          <widget class="QPushButton" name="pushButtonUnsetCamera">
+           <property name="text">
+            <string>Unset Camera Target</string>
+           </property>
+          </widget>
          </item>
          <item>
           <spacer name="verticalSpacer_2">
