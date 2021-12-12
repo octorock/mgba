@@ -15,6 +15,10 @@ struct Definition {
     std::string plainType;
 };
 
+// All my homies hate WinGDI.h for defining ERROR: https://stackoverflow.com/a/27064722
+#define NOGDI
+#undef ERROR
+
 enum class EntryType {
     NONE,
     ERROR,
