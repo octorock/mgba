@@ -145,6 +145,10 @@ void TreeItem::updateEntry(const Entry& entry) {
 	}
 }
 
+const QString& TreeItem::getKey() {
+	return key;
+}
+
 DetailsTreeModel::DetailsTreeModel(QObject* parent)
     : QAbstractItemModel(parent) {
 	entry.type = EntryType::NONE;
@@ -357,6 +361,15 @@ Entry DetailsTreeModel::getEntry(const QModelIndex& index) {
 		entry.type = EntryType::ERROR;
 		entry.errorMessage = "Could not fetch entry";
 		return entry;
+	}
+}
+
+ std::string DetailsTreeModel::getKey(const QModelIndex& index) {
+	TreeItem* item = getItem(index);
+	if (item) {
+		return item->getKey().toStdString();
+	} else {
+		return "";
 	}
 }
 

@@ -22,6 +22,7 @@ public:
     int childNumber() const;
     Entry getEntry();
     void updateEntry(const Entry& entry);
+    const QString& getKey();
 
     // TODO store some sort of pointer to the entity?
 
@@ -48,6 +49,7 @@ public:
 
 	void setEntry(const std::string& type, const Entry& entry);
 	Entry getEntry(const QModelIndex& index);
+    std::string getKey(const QModelIndex& index);
 signals:
     void entryChanged(const Entry& entry, int value);
 private:
