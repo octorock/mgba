@@ -8,6 +8,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QApplication>
 #include <QClipboard>
+#include <QNetworkReply>
 
 #include "rapidjson/filereadstream.h"
 
@@ -15,7 +16,7 @@
 
 using namespace QGBA;
 
-EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent), m_context(controller) {
+EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* parent): QWidget(parent), m_context(controller), m_networkManager(this) {
     m_ui.setupUi(this);
 
     m_core = controller->thread()->core;
@@ -100,7 +101,10 @@ FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     connect(m_ui.pushButtonWarp, &QPushButton::clicked, this, &EntityView::slotCheatWarp);
     connect(m_ui.pushButtonUnsetCamera, &QPushButton::clicked, this, &EntityView::slotUnsetCamera);
 
-
+    //// Scripts
+    m_ui.treeViewScriptDetails->setModel(&m_scriptDetailsModel);
+    m_ui.treeViewScriptDetails->expandAll();
+    connect(m_ui.pushButtonConnectScript, &QPushButton::clicked, this, &EntityView::slotConnectScriptServer);
 }
 
 Definition EntityView::buildDefinition(const rapidjson::Value& value) {
@@ -222,6 +226,7 @@ void EntityView::update() {
         this->m_entityDetailsModel.setEntry(type, entity);
         //m_ui.treeViewEntityDetails->expandAll();
     } else {
+        // TODO only set if not already
         entity.type = EntryType::NONE;
         this->m_entityDetailsModel.setEntry("", entity);
         //this->m_ui.entityInfo->setText("");
@@ -236,12 +241,35 @@ void EntityView::update() {
         //QString text = QString(m_currentWatch.type.c_str()) + " "  + QString("0x%1").arg(m_currentWatch.addr, 1, 16) + "\n" + printEntry(entry);
         this->m_memoryDetailsModel.setEntry(m_currentWatch.type, entry);
     } else {
+        // TODO only set if not already
         Entry entry;
         entry.addr = 0;
         entry.type = EntryType::NONE;
         this->m_memoryDetailsModel.setEntry("", entry);
     }
 
+
+    // Update current script
+    if (m_currentScript.addr != 0) {
+        //std::cout << "Fetching " << m_currentScript.addr << std::endl;
+        Entry entry;
+        Reader reader = Reader(m_core, m_currentScript.addr);
+        entry = readVar(reader, m_currentScript.type);
+        this->m_scriptDetailsModel.setEntry(m_currentScript.type, entry);
+        int addr = entry.object["scriptInstructionPointer"].u32; // TODO make sure the entry is a proper ScriptExecutionContext
+        if (addr != m_lastScriptAddr) {
+            sendScriptAddr(addr);
+        }
+    } else {
+        // TODO only set if not already
+        Entry entry;
+        entry.addr = 0;
+        entry.type = EntryType::NONE;
+        this->m_scriptDetailsModel.setEntry("", entry);
+        if (m_lastScriptAddr != 0) {
+            sendScriptAddr(0);
+        }
+    }
 
     // Fetch game image
     const color_t* buffer = m_context->drawContext();
@@ -1318,7 +1346,7 @@ void EntityView::slotRightClickEntityDetails(const QPoint& pos) {
         m_currentDetailsClick = m_entityDetailsModel.getEntry(index);
         if (m_currentDetailsClick.type != EntryType::NONE && m_currentDetailsClick.type != EntryType::ERROR) {
 
-            showDetailsContextMenu(m_ui.treeViewEntityDetails->viewport()->mapToGlobal(pos));
+            showDetailsContextMenu(m_ui.treeViewEntityDetails->viewport()->mapToGlobal(pos), m_entityDetailsModel.getKey(index));
         }
     }
 }
@@ -1329,12 +1357,12 @@ void EntityView::slotRightClickMemoryDetails(const QPoint& pos) {
     if (index.isValid()) {
         m_currentDetailsClick = m_memoryDetailsModel.getEntry(index);
         if (m_currentDetailsClick.type != EntryType::NONE && m_currentDetailsClick.type != EntryType::ERROR) {
-            showDetailsContextMenu(m_ui.treeViewMemoryDetails->viewport()->mapToGlobal(pos));
+            showDetailsContextMenu(m_ui.treeViewMemoryDetails->viewport()->mapToGlobal(pos), m_memoryDetailsModel.getKey(index));
         }
     }
 }
 
-void EntityView::showDetailsContextMenu(const QPoint& pos) {
+void EntityView::showDetailsContextMenu(const QPoint& pos, const std::string& key) {
     QMenu menu(this);
     menu.addAction("Copy Address", this, &EntityView::slotDetailsCopyAddress);
     switch (m_currentDetailsClick.type) {
@@ -1348,6 +1376,9 @@ void EntityView::showDetailsContextMenu(const QPoint& pos) {
             break;
         default:
             break;
+    }
+    if (key == "cutsceneBeh") {
+        menu.addAction("Show script", this, &EntityView::slotShowScript);
     }
     menu.exec(pos);
 }
@@ -1406,4 +1437,54 @@ void EntityView::slotRightClickEntityLists(const QPoint& pos) {
 void EntityView::slotSetAsCameraTarget() {
     // gRoomControls.cameraTarget = entity.addr
     m_core->rawWrite32(m_core, 0x3000c20, -1, m_currentEntityClick.addr);
+}
+
+//// Scripts
+
+void EntityView::slotConnectScriptServer() {
+    m_ui.pushButtonConnectScript->setEnabled(false);
+    QNetworkReply* reply = m_networkManager.get(QNetworkRequest(QUrl("http://localhost:10244/connect")));
+    m_ui.labelScriptConnectionStatus->setText("Connecting...");
+    connect(reply, &QNetworkReply::finished, this, [reply, this]() {
+        if (reply->error()) {
+            this->m_ui.labelScriptConnectionStatus->setText("ERROR: " + reply->errorString());
+            this->setConnectedToScriptServer(false);
+            return;
+        }
+
+        QString answer = reply->readAll();
+        if (answer == "ok") {
+            this->m_ui.labelScriptConnectionStatus->setText("Connected.");
+            this->setConnectedToScriptServer(true);
+        } else {
+            this->m_ui.labelScriptConnectionStatus->setText("ERROR: " + answer);
+            this->setConnectedToScriptServer(false);
+        }
+    });
+}
+
+void EntityView::setConnectedToScriptServer(bool connected) {
+    m_connectedToScriptServer = connected;
+    if (connected) {
+        m_lastScriptAddr = -1;
+    }
+    m_ui.pushButtonConnectScript->setEnabled(!connected);
+}
+
+void EntityView::sendScriptAddr(int addr) {
+    if (m_connectedToScriptServer) {
+        m_lastScriptAddr = addr;
+        m_networkManager.get(QNetworkRequest(QString("http://localhost:10244/script?addr=%1").arg(addr)));
+        // TODO set disconnected if any request fails
+    } else if (m_lastScriptAddr != 0) {
+        m_lastScriptAddr = 0;
+    }
+}
+
+void EntityView::slotShowScript() {
+    //std::cout << "Show " << m_currentDetailsClick.u32 << std::endl;
+    m_ui.tabWidget->setCurrentIndex(3); // Show scripts tab
+    m_currentScript.type = "ScriptExecutionContext";
+    m_currentScript.addr = m_currentDetailsClick.u32;
+    m_lastScriptAddr = -1; // Force resend to server
 }

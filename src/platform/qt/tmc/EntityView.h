@@ -7,6 +7,7 @@
 #include "rapidjson/document.h"
 #include "Entry.h"
 #include "DetailsTreeModel.h"
+#include <QNetworkAccessManager>
 
 struct mCore;
 
@@ -71,6 +72,8 @@ public slots:
     void slotDetailsCopyValue();
     void slotRightClickEntityLists(const QPoint& pos);
     void slotSetAsCameraTarget();
+    void slotConnectScriptServer();
+    void slotShowScript();
 private:
     Definition buildDefinition(const rapidjson::Value& value);
 
@@ -83,7 +86,10 @@ private:
     QString printEntry(const Entry& entry, int indentation=0);
     QString spaces(int indentation);
     void showError(const QString& message);
-    void showDetailsContextMenu(const QPoint& pos);
+    void showDetailsContextMenu(const QPoint& pos, const std::string& key);
+
+    void setConnectedToScriptServer(bool connected);
+    void sendScriptAddr(int addr);
 
     Ui::EntityView m_ui;
     mCore* m_core = nullptr;
@@ -104,6 +110,12 @@ private:
     bool m_detailsMemoryClicked;
     Entry m_currentDetailsClick;
     EntityData m_currentEntityClick;
+
+    QNetworkAccessManager m_networkManager;
+    bool m_connectedToScriptServer;
+    int m_lastScriptAddr = 0;
+    MemoryWatch m_currentScript = {0};
+    DetailsTreeModel m_scriptDetailsModel;
 };
 }
 
