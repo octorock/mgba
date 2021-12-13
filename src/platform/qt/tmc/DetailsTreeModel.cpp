@@ -90,15 +90,27 @@ QVariant TreeItem::data(int column) const {
 	case EntryType::U8:
 		return QString("0x%1").arg(entry.u8, 1, 16);
 	case EntryType::S8:
-		return QString("0x%1").arg(entry.s8, 1, 16);
+		if (entry.s8 < 0) {
+			return QString("-0x%1").arg(-entry.s8, 1, 16);
+		} else {
+			return QString("0x%1").arg(entry.s8, 1, 16);
+		}
 	case EntryType::U16:
 		return QString("0x%1").arg(entry.u16, 1, 16);
 	case EntryType::S16:
-		return QString("0x%1").arg(entry.s16, 1, 16);
+		if (entry.s16 < 0) {
+			return QString("-0x%1").arg(-entry.s16, 1, 16);
+		} else {
+			return QString("0x%1").arg(entry.s16, 1, 16);
+		}
 	case EntryType::U32:
 		return QString("0x%1").arg(entry.u32, 1, 16);
 	case EntryType::S32:
-		return QString("0x%1").arg(entry.s32, 1, 16);
+		if (entry.s32 < 0) {
+			return QString("-0x%1").arg(-entry.s32, 1, 16);
+		} else {
+			return QString("0x%1").arg(entry.s32, 1, 16);
+		}
 	case EntryType::ARRAY:
 	case EntryType::OBJECT:
 		return "";
@@ -415,10 +427,11 @@ bool DetailsTreeModel::setData(const QModelIndex& index, const QVariant& value, 
 	TreeItem* item = getItem(index);
 	bool ok;
 	int base = 10;
-	if (value.toString().startsWith("0x")) {
+	if (value.toString().startsWith("0x") || value.toString().startsWith("-0x")) {
 		base = 16;
 	}
-	int intValue = value.toString().toUInt(&ok, base);
+
+	int intValue = value.toString().toInt(&ok, base);
 	if (ok) {
 		const Entry& entry = item->getEntry();
 		emit entryChanged(entry, intValue);
