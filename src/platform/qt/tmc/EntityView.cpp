@@ -105,6 +105,11 @@ FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     m_ui.treeViewScriptDetails->setModel(&m_scriptDetailsModel);
     m_ui.treeViewScriptDetails->expandAll();
     connect(m_ui.pushButtonConnectScript, &QPushButton::clicked, this, &EntityView::slotConnectScriptServer);
+    m_ui.listWidgetScripts->addItem("P");
+    for (int i = 0; i < 32; i++) {
+        m_ui.listWidgetScripts->addItem(QString::number(i));
+    }
+    connect(m_ui.listWidgetScripts, &QListWidget::currentRowChanged, this, &EntityView::slotScriptContextSelected);
 }
 
 Definition EntityView::buildDefinition(const rapidjson::Value& value) {
@@ -248,6 +253,28 @@ void EntityView::update() {
         this->m_memoryDetailsModel.setEntry("", entry);
     }
 
+
+    // Update script lists
+    int activeScripts = 0;
+    for (int i = 0; i < 32; i++) {
+        uint addr= 0x2036570 + i*36;
+        uint32_t scriptInstructionPointer = m_core->rawRead32(m_core, addr, -1);
+        Qt::ItemFlags flags = Qt::ItemIsSelectable;
+        if (scriptInstructionPointer != 0) {
+            flags |= Qt::ItemIsEnabled;
+            activeScripts++;
+        }
+        m_ui.listWidgetScripts->item(i+1)->setFlags(flags);
+        m_ui.listWidgetScripts->item(i+1)->setSelected(m_currentScript.addr == addr);
+    }
+
+    uint addr = 0x2022750;
+    uint32_t scriptInstructionPointer = m_core->rawRead32(m_core, addr, -1);
+    m_ui.listWidgetScripts->item(0)->setFlags(scriptInstructionPointer == 0 ? Qt::NoItemFlags : Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    if (scriptInstructionPointer != 0) {activeScripts++;}
+    m_ui.listWidgetScripts->item(0)->setSelected(m_currentScript.addr == addr);
+
+    m_ui.labelActiveScriptCount->setText(QString("%1 scripts active").arg(activeScripts));
 
     // Update current script
     if (m_currentScript.addr != 0) {
@@ -1486,5 +1513,15 @@ void EntityView::slotShowScript() {
     m_ui.tabWidget->setCurrentIndex(3); // Show scripts tab
     m_currentScript.type = "ScriptExecutionContext";
     m_currentScript.addr = m_currentDetailsClick.u32;
+    m_lastScriptAddr = -1; // Force resend to server
+}
+
+void EntityView::slotScriptContextSelected(int row) {
+    int addr = 0x2022750;
+    if (row != 0) {
+        addr = 0x2036570 + (row-1)*36;
+    }
+    m_currentScript.type = "ScriptExecutionContext";
+    m_currentScript.addr = addr;
     m_lastScriptAddr = -1; // Force resend to server
 }
