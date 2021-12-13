@@ -353,6 +353,8 @@ void EntityView::update() {
         painter.end();
     }
 
+    // TODO Does it make ta difference if we scale the resulting pixmap?
+    m_backing = m_backing.scaled(m_backing.size() * m_ui.spinBoxMagnification->value());
     m_ui.labelGameView->setPixmap(QPixmap::fromImage(m_backing));
 }
 
