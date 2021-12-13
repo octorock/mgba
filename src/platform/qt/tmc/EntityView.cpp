@@ -298,6 +298,12 @@ void EntityView::update() {
         }
     }
 
+    // Cheats
+    if (m_ui.checkBoxFreezeHealth->isChecked()) {
+        slotCheatFullHealth();
+    }
+
+
     // Fetch game image
     const color_t* buffer = m_context->drawContext();
 
