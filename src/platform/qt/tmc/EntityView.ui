@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabEntityExplorer">
       <attribute name="title">
@@ -39,12 +39,42 @@
           <bool>false</bool>
          </property>
          <widget class="QWidget" name="layoutWidget">
-          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0">
+          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
            <item>
             <widget class="QTreeView" name="treeViewEntities"/>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <item>
+              <widget class="QSpinBox" name="spinBoxMagnification">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="suffix">
+                <string>×</string>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+               <property name="maximum">
+                <number>8</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Magnification</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QLabel" name="labelGameView">
