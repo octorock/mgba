@@ -74,6 +74,7 @@ public slots:
     void slotSetAsCameraTarget();
     void slotConnectScriptServer();
     void slotShowScript();
+    void slotScriptContextSelected(int row);
 private:
     Definition buildDefinition(const rapidjson::Value& value);
 
@@ -112,7 +113,7 @@ private:
     EntityData m_currentEntityClick;
 
     QNetworkAccessManager m_networkManager;
-    bool m_connectedToScriptServer;
+    bool m_connectedToScriptServer = false;
     int m_lastScriptAddr = 0;
     MemoryWatch m_currentScript = {0};
     DetailsTreeModel m_scriptDetailsModel;
