@@ -83,6 +83,9 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 	m_hitboxPen.setWidth(1);
 	m_hitboxPen.setColor(Qt::red);
 
+	m_otherHitboxPen.setWidth(1);
+	m_otherHitboxPen.setColor(Qt::darkRed);
+
 	m_circlePen.setWidth(1);
 	m_circlePen.setColor(Qt::red);
 
@@ -351,7 +354,6 @@ void EntityView::update() {
 		// Draw all checkboxes
 		// TODO create painter only once?
 		QPainter painter(&m_backing);
-		painter.setPen(m_hitboxPen);
 		// Fetch gRoomControls
 		// TODO create unique read methods for stuff read often that just correctly fetch the needed values.
 		Reader reader = Reader(m_core, 0x3000BF0);
@@ -366,6 +368,13 @@ void EntityView::update() {
 				if (data.kind != 9) {
 					int hitboxAddr = m_core->rawRead32(m_core, data.addr + 0x48, -1);
 					if (hitboxAddr != 0) {
+
+                        if (data.addr == m_currentEntity.addr) {
+                            painter.setPen(m_hitboxPen);
+                        } else {
+                            painter.setPen(m_otherHitboxPen);
+                        }
+
 						Entry hitbox = readVar(hitboxAddr, "Hitbox");
 						int16_t entityX = m_core->rawRead16(m_core, data.addr + 0x2E, -1);
 						int16_t entityY = m_core->rawRead16(m_core, data.addr + 0x32, -1);
@@ -1295,7 +1304,6 @@ void EntityView::slotRightClickEntityLists(const QPoint& pos) {
 			if (m_currentEntityClick.kind != 9) {
 				// Read cutsceneBeh
 				uint sec = m_core->rawRead32(m_core, m_currentEntityClick.addr + 0x84, -1);
-				std::cout << "SEC " << sec << std::endl;
 				if (sec == 0x2022750 || (sec >= 0x2036570 && sec <= 0x2036570 + 32 * 36)) {
 					menu.addAction("Show Script", this, &EntityView::slotShowScriptFromEntity);
 				}
