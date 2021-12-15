@@ -116,7 +116,7 @@ void EntityTreeModel::setEntities(int listIndex, QList<EntityData> entities) {
 }
 
 EntityData EntityTreeModel::getEntity(const QModelIndex& index) {
-    if (!index.parent().isValid()) {
+    if (!index.isValid() || !index.parent().isValid()) {
         //std::cerr << "No valid parent for " << index.row() << std::endl;
         return {};
     }
