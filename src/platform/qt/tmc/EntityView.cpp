@@ -104,12 +104,18 @@ FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     //// Scripts
     m_ui.treeViewScriptDetails->setModel(&m_scriptDetailsModel);
     m_ui.treeViewScriptDetails->expandAll();
+    connect(&m_scriptDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
+    m_ui.treeViewScriptDetails->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.treeViewScriptDetails, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickScriptDetails);
+
     connect(m_ui.pushButtonConnectScript, &QPushButton::clicked, this, &EntityView::slotConnectScriptServer);
     m_ui.listWidgetScripts->addItem("P");
     for (int i = 0; i < 32; i++) {
         m_ui.listWidgetScripts->addItem(QString::number(i));
     }
     connect(m_ui.listWidgetScripts, &QListWidget::currentRowChanged, this, &EntityView::slotScriptContextSelected);
+    m_ui.listWidgetScripts->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_ui.listWidgetScripts, &QListWidget::customContextMenuRequested, this, &EntityView::slotRightClickScriptList);
 }
 
 Definition EntityView::buildDefinition(const rapidjson::Value& value) {
@@ -324,39 +330,75 @@ void EntityView::update() {
 #endif
 
 
-    // Paint on the image
-    if (m_currentEntity.addr != 0 && m_currentEntity.kind != 9 && entity.object["prev"].u32 != 0) {
+    if (m_ui.checkBoxAllHitboxes) {
+        // Draw all checkboxes
         // TODO create painter only once?
         QPainter painter(&m_backing);
-
+        painter.setPen(m_hitboxPen);
         // Fetch gRoomControls
         // TODO create unique read methods for stuff read often that just correctly fetch the needed values.
         Reader reader = Reader(m_core, 0x3000BF0);
         Entry roomControls = readVar(reader, "RoomControls");
         int16_t scrollX = roomControls.object["roomScrollX"].s16;
         int16_t scrollY = roomControls.object["roomScrollY"].s16;
-        int16_t entityX = entity.object["x"].object["HALF"].object["HI"].s16;
-        int16_t entityY = entity.object["y"].object["HALF"].object["HI"].s16 + entity.object["height"].object["HALF"].object["HI"].s16;
 
-        if (entity.object["hitbox"].u32 != 0) {
-            Entry hitbox = readVar(entity.object["hitbox"].u32, "Hitbox");
-            // Draw hitbox
-            painter.setPen(m_hitboxPen);
-            painter.drawRect(
-                entityX-scrollX+hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
-                entityY-scrollY+hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
-                hitbox.object["width"].u8*2,
-                hitbox.object["height"].u8*2
-                );
-        } else {
-            painter.setPen(m_circlePen);
-            int circleRadius = 8;
-            painter.drawEllipse(entityX-scrollX-circleRadius,entityY-scrollY-circleRadius, circleRadius*2,circleRadius*2);
+        for (int listIndex = 0; listIndex < ENTITY_LISTS; listIndex++) {
+            const QList<EntityData>& list = m_model.getEntities(listIndex);
+            for (int i = 0; i < list.count(); i++) {
+                const EntityData& data = list.at(i);
+                if (data.kind != 9) {
+                    int hitboxAddr = m_core->rawRead32(m_core, data.addr + 0x48, -1);
+                    if (hitboxAddr != 0) {
+                        Entry hitbox = readVar(hitboxAddr, "Hitbox");
+                        int16_t entityX = m_core->rawRead16(m_core, data.addr + 0x2E, -1);
+                        int16_t entityY = m_core->rawRead16(m_core, data.addr + 0x32, -1);
+
+                        // Draw hitbox
+                        painter.drawRect(
+                            entityX-scrollX+hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
+                            entityY-scrollY+hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
+                            hitbox.object["width"].u8*2,
+                            hitbox.object["height"].u8*2
+                        );
+                    }
+                }
+            }
         }
-        painter.setRenderHint(QPainter::Antialiasing);
-        painter.setPen(m_linePen);
-        painter.drawLine(10,10,entityX-scrollX,entityY-scrollY);
-        painter.end();
+    } else {
+        // Draw position & hitbox for the current entity
+        if (m_currentEntity.addr != 0 && m_currentEntity.kind != 9 && entity.object["prev"].u32 != 0) {
+            // TODO create painter only once?
+            QPainter painter(&m_backing);
+
+            // Fetch gRoomControls
+            // TODO create unique read methods for stuff read often that just correctly fetch the needed values.
+            Reader reader = Reader(m_core, 0x3000BF0);
+            Entry roomControls = readVar(reader, "RoomControls");
+            int16_t scrollX = roomControls.object["roomScrollX"].s16;
+            int16_t scrollY = roomControls.object["roomScrollY"].s16;
+            int16_t entityX = entity.object["x"].object["HALF"].object["HI"].s16;
+            int16_t entityY = entity.object["y"].object["HALF"].object["HI"].s16 + entity.object["height"].object["HALF"].object["HI"].s16;
+
+            if (entity.object["hitbox"].u32 != 0) {
+                Entry hitbox = readVar(entity.object["hitbox"].u32, "Hitbox");
+                // Draw hitbox
+                painter.setPen(m_hitboxPen);
+                painter.drawRect(
+                    entityX-scrollX+hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
+                    entityY-scrollY+hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
+                    hitbox.object["width"].u8*2,
+                    hitbox.object["height"].u8*2
+                    );
+            } else {
+                painter.setPen(m_circlePen);
+                int circleRadius = 8;
+                painter.drawEllipse(entityX-scrollX-circleRadius,entityY-scrollY-circleRadius, circleRadius*2,circleRadius*2);
+            }
+            painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(m_linePen);
+            painter.drawLine(10,10,entityX-scrollX,entityY-scrollY);
+            painter.end();
+        }
     }
 
     // TODO Does it make ta difference if we scale the resulting pixmap?
@@ -1375,7 +1417,6 @@ void EntityView::slotUnsetCamera() {
 }
 
 void EntityView::slotRightClickEntityDetails(const QPoint& pos) {
-    m_detailsMemoryClicked = false;
     QModelIndex index = m_ui.treeViewEntityDetails->indexAt(pos);
     if (index.isValid()) {
         m_currentDetailsClick = m_entityDetailsModel.getEntry(index);
@@ -1387,7 +1428,6 @@ void EntityView::slotRightClickEntityDetails(const QPoint& pos) {
 }
 
 void EntityView::slotRightClickMemoryDetails(const QPoint& pos) {
-    m_detailsMemoryClicked = true;
     QModelIndex index = m_ui.treeViewMemoryDetails->indexAt(pos);
     if (index.isValid()) {
         m_currentDetailsClick = m_memoryDetailsModel.getEntry(index);
@@ -1397,9 +1437,18 @@ void EntityView::slotRightClickMemoryDetails(const QPoint& pos) {
     }
 }
 
+void EntityView::slotRightClickScriptDetails(const QPoint& pos) {
+    QModelIndex index = m_ui.treeViewScriptDetails->indexAt(pos);
+    if (index.isValid()) {
+        m_currentDetailsClick = m_scriptDetailsModel.getEntry(index);
+        if (m_currentDetailsClick.type != EntryType::NONE && m_currentDetailsClick.type != EntryType::ERROR) {
+            showDetailsContextMenu(m_ui.treeViewScriptDetails->viewport()->mapToGlobal(pos), m_scriptDetailsModel.getKey(index));
+        }
+    }
+}
+
 void EntityView::showDetailsContextMenu(const QPoint& pos, const std::string& key) {
     QMenu menu(this);
-    menu.addAction("Copy Address", this, &EntityView::slotDetailsCopyAddress);
     switch (m_currentDetailsClick.type) {
         case EntryType::U8:
         case EntryType::S8:
@@ -1412,8 +1461,9 @@ void EntityView::showDetailsContextMenu(const QPoint& pos, const std::string& ke
         default:
             break;
     }
+    menu.addAction("Copy Address", this, &EntityView::slotDetailsCopyAddress);
     if (key == "cutsceneBeh") {
-        menu.addAction("Show script", this, &EntityView::slotShowScript);
+        menu.addAction("Show Script", this, &EntityView::slotShowScript);
     }
     menu.exec(pos);
 }
@@ -1464,6 +1514,17 @@ void EntityView::slotRightClickEntityLists(const QPoint& pos) {
         if (m_currentEntityClick.addr != 0 && m_currentEntityClick.kind != 9) {
             QMenu menu(this);
             menu.addAction("Set as Camera Target", this, &EntityView::slotSetAsCameraTarget);
+
+            if (m_currentEntityClick.kind != 9) {
+                // Read cutsceneBeh
+                uint sec = m_core->rawRead32(m_core, m_currentEntityClick.addr + 0x84, -1);
+                std::cout << "SEC " << sec << std::endl;
+                if (sec == 0x2022750 || (sec >= 0x2036570 && sec <= 0x2036570+32*36)) {
+                    menu.addAction("Show Script", this, &EntityView::slotShowScriptFromEntity);
+                }
+
+            }
+
             menu.exec(m_ui.treeViewEntities->viewport()->mapToGlobal(pos));
         }
     }
@@ -1524,6 +1585,13 @@ void EntityView::slotShowScript() {
     m_lastScriptAddr = -1; // Force resend to server
 }
 
+void EntityView::slotShowScriptFromEntity() {
+    m_ui.tabWidget->setCurrentIndex(3); // Show scripts tab
+    m_currentScript.type = "ScriptExecutionContext";
+    m_currentScript.addr = m_core->rawRead32(m_core, m_currentEntityClick.addr + 0x84, -1);
+    m_lastScriptAddr = -1; // Force resend to server
+}
+
 void EntityView::slotScriptContextSelected(int row) {
     int addr = 0x2022750;
     if (row != 0) {
@@ -1532,4 +1600,31 @@ void EntityView::slotScriptContextSelected(int row) {
     m_currentScript.type = "ScriptExecutionContext";
     m_currentScript.addr = addr;
     m_lastScriptAddr = -1; // Force resend to server
+}
+
+void EntityView::slotRightClickScriptList(const QPoint& pos) {
+    QModelIndex index = m_ui.listWidgetScripts->indexAt(pos);
+    if (index.isValid()) {
+        // Search the entity that is running this script
+        int addr = 0x2022750;
+        if (index.row() != 0) {
+            addr = 0x2036570 + (index.row()-1)*36;
+        }
+        for (int listIndex = 0; listIndex < ENTITY_LISTS; listIndex++) {
+            const QList<EntityData>& list = m_model.getEntities(listIndex);
+            for (int i = 0; i < list.count(); i++) {
+                const EntityData& data = list.at(i);
+                if (data.kind != 9) {
+                    int cutsceneBeh = m_core->rawRead32(m_core, data.addr + 0x84, -1);
+                    if (cutsceneBeh == addr) {
+                        std::cout << "Select entity " << listIndex << ":" << i <<std::endl;
+                        QMenu menu(this);
+                        menu.addAction("Show Corresponding Entity");
+                        menu.exec(m_ui.listWidgetScripts->viewport()->mapToGlobal(pos));
+                        return;
+                    }
+                }
+            }
+        }
+    }
 }

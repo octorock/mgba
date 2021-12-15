@@ -39,7 +39,7 @@
           <bool>false</bool>
          </property>
          <widget class="QWidget" name="layoutWidget">
-          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0">
+          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0,0">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
@@ -75,6 +75,13 @@
               </widget>
              </item>
             </layout>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="checkBoxAllHitboxes">
+             <property name="text">
+              <string>Show all Hitboxes</string>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QLabel" name="labelGameView">
