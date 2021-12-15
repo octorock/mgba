@@ -118,6 +118,11 @@ EntityData EntityTreeModel::getEntity(const QModelIndex& index) {
     }
     return m_entities[index.parent().row()].at(index.row());
 }
+
+const QList<EntityData>& EntityTreeModel::getEntities(int listIndex) {
+    return m_entities[listIndex];
+}
+
 QVariant EntityTreeModel::headerData(int section, Qt::Orientation orientation,
                                int role) const
 {

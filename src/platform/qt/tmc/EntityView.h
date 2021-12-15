@@ -74,7 +74,10 @@ public slots:
     void slotSetAsCameraTarget();
     void slotConnectScriptServer();
     void slotShowScript();
+    void slotShowScriptFromEntity();
     void slotScriptContextSelected(int row);
+    void slotRightClickScriptDetails(const QPoint& pos);
+    void slotRightClickScriptList(const QPoint& pos);
 private:
     Definition buildDefinition(const rapidjson::Value& value);
 
@@ -108,7 +111,6 @@ private:
     QPen m_circlePen;
     QPen m_linePen;
     QPoint m_currentGameViewClick;
-    bool m_detailsMemoryClicked;
     Entry m_currentDetailsClick;
     EntityData m_currentEntityClick;
 
