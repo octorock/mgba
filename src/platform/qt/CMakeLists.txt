@@ -514,3 +514,7 @@ if(DISTBUILD AND NOT APPLE)
 		add_custom_command(TARGET ${BINARY_NAME}-qt POST_BUILD COMMAND "${STRIP}" "$<TARGET_FILE:${BINARY_NAME}-qt>")
 	endif()
 endif()
+
+# Copy the structs.json to the executable
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/tmc/structs.json DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${BINARY_NAME}-qt)
+add_custom_command(TARGET ${BINARY_NAME}-qt POST_BUILD COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tmc/structs.json ${CMAKE_CURRENT_BINARY_DIR}/structs.json)
