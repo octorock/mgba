@@ -56,7 +56,11 @@ FILE* fp = fopen("../../src/platform/qt/tmc/structs.json", "rb");
     m_ui.treeViewEntityDetails->expandAll();
 
 	connect(m_ui.treeViewEntities->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this](const QItemSelection& selection) {
-        m_currentEntity = m_model.getEntity(selection.indexes().first());
+        if (selection.count() > 0) {
+            m_currentEntity = m_model.getEntity(selection.indexes().first());
+        } else {
+            m_currentEntity.addr = 0;
+        }
         update();
 	});
     connect(&m_entityDetailsModel, &DetailsTreeModel::entryChanged, this, &EntityView::slotChangeEntry);
@@ -330,7 +334,7 @@ void EntityView::update() {
 #endif
 
 
-    if (m_ui.checkBoxAllHitboxes) {
+    if (m_ui.checkBoxAllHitboxes->isChecked()) {
         // Draw all checkboxes
         // TODO create painter only once?
         QPainter painter(&m_backing);
@@ -1392,10 +1396,10 @@ void EntityView::slotChangeEntry(const Entry& entry, int value) {
 
 void EntityView::slotRightClickGameView(const QPoint& pos) {
     QMenu menu(this);
+    menu.addAction("Select entity", this, &EntityView::slotGameViewSelect);
     menu.addAction("Teleport here", this, &EntityView::slotGameViewTeleport);
-    // menu.addAction("Select entity"); // TODO
     // std::cout << pos.x() << ", " << pos.y() << std::endl;
-    m_currentGameViewClick = pos;
+    m_currentGameViewClick = pos / m_ui.spinBoxMagnification->value();
     menu.exec(m_ui.labelGameView->mapToGlobal(pos));
 }
 
@@ -1409,6 +1413,71 @@ void EntityView::slotGameViewTeleport() {
     printf("%x, %x\n", newX, newY);
     m_core->rawWrite16(m_core, 0x300118e, -1, newX);
     m_core->rawWrite16(m_core, 0x3001192, -1, newY);
+}
+
+void EntityView::slotGameViewSelect() {
+    int roomScrollX = m_core->rawRead16(m_core, 0x3000bfa, -1);
+    int roomScrollY = m_core->rawRead16(m_core, 0x3000bfc, -1);
+
+    // First try to select by the hitbox.
+    for (int listIndex = 0; listIndex < ENTITY_LISTS; listIndex++) {
+        const QList<EntityData>& list = m_model.getEntities(listIndex);
+        for (int i = 0; i < list.count(); i++) {
+            const EntityData& data = list.at(i);
+            if (data.kind != 9) {
+                int hitboxAddr = m_core->rawRead32(m_core, data.addr + 0x48, -1);
+                if (hitboxAddr != 0) {
+                    Entry hitbox = readVar(hitboxAddr, "Hitbox");
+                    int16_t entityX = m_core->rawRead16(m_core, data.addr + 0x2E, -1);
+                    int16_t entityY = m_core->rawRead16(m_core, data.addr + 0x32, -1);
+
+                    int x = entityX-roomScrollX+hitbox.object["offset_x"].s8 - hitbox.object["width"].u8;
+                    int y = entityY-roomScrollY+hitbox.object["offset_y"].s8 - hitbox.object["height"].u8;
+                    int width = hitbox.object["width"].u8*2;
+                    int height = hitbox.object["height"].u8*2;
+                    int clickX = m_currentGameViewClick.x();
+                    int clickY = m_currentGameViewClick.y();
+                    if (clickX >= x && clickX <= x+width && clickY >= y && clickY <= y+height) {
+                        std::cout << "Selected " << listIndex << ":" << i << " via hitbox" << std::endl;
+                        m_currentEntityClick = data;
+                        slotSelectClickedEntity();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // No hitbox hit? Try a 10x10 box around each object.
+    for (int listIndex = 0; listIndex < ENTITY_LISTS; listIndex++) {
+        const QList<EntityData>& list = m_model.getEntities(listIndex);
+        for (int i = 0; i < list.count(); i++) {
+            const EntityData& data = list.at(i);
+            if (data.kind != 9) {
+                int16_t entityX = m_core->rawRead16(m_core, data.addr + 0x2E, -1);
+                int16_t entityY = m_core->rawRead16(m_core, data.addr + 0x32, -1);
+
+                const int fakeHitboxRadius = 5;
+
+                int x = entityX-roomScrollX - fakeHitboxRadius;
+                int y = entityY-roomScrollY - fakeHitboxRadius;
+                int width = fakeHitboxRadius*2;
+                int height = fakeHitboxRadius*2;
+                int clickX = m_currentGameViewClick.x();
+                int clickY = m_currentGameViewClick.y();
+                if (clickX >= x && clickX <= x+width && clickY >= y && clickY <= y+height) {
+                    std::cout << "Selected " << listIndex << ":" << i << " via rect" << std::endl;
+                    m_currentEntityClick = data;
+                    slotSelectClickedEntity();
+                    return;
+                }
+            }
+        }
+    }
+
+    // Did not select anything.
+    std::cout << "Selected nothing" << std::endl;
+    m_ui.treeViewEntities->setCurrentIndex(QModelIndex());
 }
 
 void EntityView::slotUnsetCamera() {

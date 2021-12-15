@@ -65,6 +65,7 @@ public slots:
     void slotChangeEntry(const Entry& entry, int value);
     void slotRightClickGameView(const QPoint& pos);
     void slotGameViewTeleport();
+    void slotGameViewSelect();
     void slotUnsetCamera();
     void slotRightClickEntityDetails(const QPoint& pos);
     void slotRightClickMemoryDetails(const QPoint& pos);
