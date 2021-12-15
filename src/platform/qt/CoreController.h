@@ -310,7 +310,9 @@ private:
 
 	bool m_mute;
 
+public:
 	InputController* m_inputController = nullptr;
+private:
 	LogController* m_log = nullptr;
 	MultiplayerController* m_multiplayer = nullptr;
 #ifdef M_CORE_GBA

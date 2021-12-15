@@ -4,25 +4,25 @@
 
 namespace QGBA {
 
-
 struct MemoryWatch {
-    uint32_t addr;
-    QString name;
-    std::string type;
+	uint32_t addr;
+	QString name;
+	std::string type;
 };
 
 class MemoryWatchModel : public QAbstractListModel {
-Q_OBJECT
+	Q_OBJECT
 public:
-    MemoryWatchModel(QObject* parent = nullptr);
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+	MemoryWatchModel(QObject* parent = nullptr);
+	virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
-    //void setEntities(QList<EntityData> entities);
-    void addMemoryWatch(MemoryWatch watch);
-    MemoryWatch getMemoryWatch(const QModelIndex& index);
+	// void setEntities(QList<EntityData> entities);
+	void addMemoryWatch(MemoryWatch watch);
+	MemoryWatch getMemoryWatch(const QModelIndex& index);
+
 private:
-    QList<MemoryWatch> m_watches;
+	QList<MemoryWatch> m_watches;
 };
 
 }
