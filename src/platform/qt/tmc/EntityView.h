@@ -107,6 +107,7 @@ private:
 	QImage m_backing;
 
 	QPen m_hitboxPen;
+    QPen m_otherHitboxPen;
 	QPen m_circlePen;
 	QPen m_linePen;
 	QPoint m_currentGameViewClick;
