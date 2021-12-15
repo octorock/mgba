@@ -24,7 +24,7 @@ public:
 	void setEntities(int listIndex, QList<EntityData> entities);
 	EntityData getEntity(const QModelIndex& index);
 	const QList<EntityData>& getEntities(int listIndex);
-
+	QModelIndex getIndex(const EntityData& data);
 private:
 	QList<EntityData> m_entities[ENTITY_LISTS];
 };

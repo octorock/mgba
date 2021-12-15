@@ -78,6 +78,7 @@ public slots:
     void slotScriptContextSelected(int row);
     void slotRightClickScriptDetails(const QPoint& pos);
     void slotRightClickScriptList(const QPoint& pos);
+    void slotSelectClickedEntity();
 private:
     Definition buildDefinition(const rapidjson::Value& value);
 
