@@ -413,3 +413,7 @@ if(DISTBUILD AND CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 		install(FILES "$<TARGET_FILE:${BINARY_NAME}-qt>.debug" DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${BINARY_NAME}-qt-dbg)
 	endif()
 endif()
+
+# Copy the structs.json to the executable
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/tmc/structs.json DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${BINARY_NAME}-qt)
+add_custom_command(TARGET ${BINARY_NAME}-qt POST_BUILD COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/tmc/structs.json ${CMAKE_CURRENT_BINARY_DIR}/structs.json)
