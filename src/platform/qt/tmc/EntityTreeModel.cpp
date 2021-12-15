@@ -54,6 +54,10 @@ QModelIndex EntityTreeModel::index(int row, int column, const QModelIndex &paren
     }
 }
 
+QModelIndex EntityTreeModel::getIndex(const EntityData& data) {
+    return createIndex(data.entryId, 0, data.listId+1);
+}
+
 QModelIndex EntityTreeModel::parent(const QModelIndex &index) const
 {
     //std::cout << "get parent " << index.row() << std::endl;

@@ -1618,8 +1618,9 @@ void EntityView::slotRightClickScriptList(const QPoint& pos) {
                     int cutsceneBeh = m_core->rawRead32(m_core, data.addr + 0x84, -1);
                     if (cutsceneBeh == addr) {
                         std::cout << "Select entity " << listIndex << ":" << i <<std::endl;
+                        m_currentEntityClick = data;
                         QMenu menu(this);
-                        menu.addAction("Show Corresponding Entity");
+                        menu.addAction("Show Corresponding Entity", this, &EntityView::slotSelectClickedEntity);
                         menu.exec(m_ui.listWidgetScripts->viewport()->mapToGlobal(pos));
                         return;
                     }
@@ -1627,4 +1628,10 @@ void EntityView::slotRightClickScriptList(const QPoint& pos) {
             }
         }
     }
+}
+
+
+void EntityView::slotSelectClickedEntity() {
+    m_ui.tabWidget->setCurrentIndex(0); // Show entity explorer tab
+    m_ui.treeViewEntities->setCurrentIndex(m_model.getIndex(m_currentEntityClick));
 }
