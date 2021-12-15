@@ -126,6 +126,7 @@ set(SOURCE_FILES
 	tmc/MemoryWatchModel.cpp
 	tmc/EntityTreeModel.cpp
 	tmc/DetailsTreeModel.cpp
+	tmc/GameLabel.cpp
 	)
 
 set(UI_FILES

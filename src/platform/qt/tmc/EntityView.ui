@@ -84,7 +84,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="labelGameView">
+            <widget class="QGBA::GameLabel" name="labelGameView">
              <property name="text">
               <string>TextLabel</string>
              </property>
@@ -455,6 +455,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QGBA::GameLabel</class>
+   <extends>QLabel</extends>
+   <header>tmc/GameLabel.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

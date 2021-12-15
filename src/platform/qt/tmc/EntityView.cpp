@@ -75,6 +75,8 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 	connect(m_ui.treeViewEntities, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickEntityLists);
 
 	// Game View
+    m_ui.labelGameView->setController(controller);
+    m_ui.labelGameView->setFocusPolicy(Qt::FocusPolicy::StrongFocus);
 	m_ui.labelGameView->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(m_ui.labelGameView, &QWidget::customContextMenuRequested, this, &EntityView::slotRightClickGameView);
 	// Setup pens
