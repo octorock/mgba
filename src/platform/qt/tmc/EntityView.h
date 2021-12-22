@@ -57,6 +57,8 @@ public slots:
 	void slotCheatNearlyDead();
 	void slotCheatAllHearts();
 	void slotCheatWarp();
+	void slotCheatKillAllEnemies();
+	void slotCheatFullLightLevel();
 	void slotAddMemoryWatch();
 	void slotChangeEntry(const Entry& entry, int value);
 	void slotRightClickGameView(const QPoint& pos);
@@ -78,6 +80,12 @@ public slots:
 	void slotSelectClickedEntity();
 
 private:
+	void updateEntityLists();
+	void updateEntityExplorer();
+	void updateMemoryViewer();
+	void updateCheats();
+	void updateScripts();
+
 	Definition buildDefinition(const rapidjson::Value& value);
 
 	Entry readVar(uint addr, const std::string& type);
@@ -107,7 +115,7 @@ private:
 	QImage m_backing;
 
 	QPen m_hitboxPen;
-    QPen m_otherHitboxPen;
+	QPen m_otherHitboxPen;
 	QPen m_circlePen;
 	QPen m_linePen;
 	QPoint m_currentGameViewClick;
