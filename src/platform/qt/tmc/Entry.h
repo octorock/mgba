@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+typedef unsigned int uint;
+
 enum class Type { STRUCT, UNION, PLAIN };
 
 struct Definition {

@@ -283,6 +283,20 @@
            </property>
           </widget>
          </item>
+         <item alignment="Qt::AlignLeft">
+          <widget class="QPushButton" name="pushButtonKillAllEnemies">
+           <property name="text">
+            <string>Kill All Enemies</string>
+           </property>
+          </widget>
+         </item>
+         <item alignment="Qt::AlignLeft">
+          <widget class="QPushButton" name="pushButtonFullLightLevel">
+           <property name="text">
+            <string>Set Full Light Level</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <spacer name="verticalSpacer_2">
            <property name="orientation">
