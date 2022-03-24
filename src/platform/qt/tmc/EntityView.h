@@ -118,6 +118,10 @@ private:
 	QPen m_otherHitboxPen;
 	QPen m_circlePen;
 	QPen m_linePen;
+	QFont m_smallFont;
+	QFont m_font;
+	QPen m_whitePen;
+	QPen m_blackPen;
 	QPoint m_currentGameViewClick;
 	Entry m_currentDetailsClick;
 	EntityData m_currentEntityClick;

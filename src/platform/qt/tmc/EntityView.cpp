@@ -93,6 +93,10 @@ EntityView::EntityView(std::shared_ptr<CoreController> controller, QWidget* pare
 	m_linePen.setWidth(2);
 	m_linePen.setColor(Qt::red);
 
+	m_smallFont.setPixelSize(7);
+	m_font.setPixelSize(11);
+	m_whitePen.setColor(Qt::white);
+
 	//// Memory Viewer
 	m_ui.listMemory->setModel(&m_memoryModel);
 	m_ui.treeViewMemoryDetails->setModel(&m_memoryDetailsModel);
@@ -287,17 +291,14 @@ void EntityView::updateEntityExplorer() {
 	m_backing = m_backing.rgbSwapped();
 #endif
 
+	// TODO create painter only once?
+	QPainter painter(&m_backing);
+
+	int16_t roomScrollX = m_core->rawRead16(m_core, 0x3000bfa, -1);
+	int16_t roomScrollY = m_core->rawRead16(m_core, 0x3000bfc, -1);
+
 	if (m_ui.checkBoxAllHitboxes->isChecked()) {
 		// Draw all checkboxes
-		// TODO create painter only once?
-		QPainter painter(&m_backing);
-		// Fetch gRoomControls
-		// TODO create unique read methods for stuff read often that just correctly fetch the needed values.
-		Reader reader = Reader(m_core, 0x3000BF0);
-		Entry roomControls = readVar(reader, "RoomControls");
-		int16_t scrollX = roomControls.object["roomScrollX"].s16;
-		int16_t scrollY = roomControls.object["roomScrollY"].s16;
-
 		for (int listIndex = 0; listIndex < ENTITY_LISTS; listIndex++) {
 			const QList<EntityData>& list = m_model.getEntities(listIndex);
 			for (int i = 0; i < list.count(); i++) {
@@ -316,8 +317,8 @@ void EntityView::updateEntityExplorer() {
 						int16_t entityY = m_core->rawRead16(m_core, data.addr + 0x32, -1);
 
 						// Draw hitbox
-						painter.drawRect(entityX - scrollX + hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
-						                 entityY - scrollY + hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
+						painter.drawRect(entityX - roomScrollX + hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
+						                 entityY - roomScrollY + hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
 						                 hitbox.object["width"].u8 * 2, hitbox.object["height"].u8 * 2);
 					}
 				}
@@ -326,15 +327,6 @@ void EntityView::updateEntityExplorer() {
 	} else {
 		// Draw position & hitbox for the current entity
 		if (m_currentEntity.addr != 0 && m_currentEntity.kind != 9 && entity.object["prev"].u32 != 0) {
-			// TODO create painter only once?
-			QPainter painter(&m_backing);
-
-			// Fetch gRoomControls
-			// TODO create unique read methods for stuff read often that just correctly fetch the needed values.
-			Reader reader = Reader(m_core, 0x3000BF0);
-			Entry roomControls = readVar(reader, "RoomControls");
-			int16_t scrollX = roomControls.object["roomScrollX"].s16;
-			int16_t scrollY = roomControls.object["roomScrollY"].s16;
 			int16_t entityX = entity.object["x"].object["HALF"].object["HI"].s16;
 			int16_t entityY = entity.object["y"].object["HALF"].object["HI"].s16 +
 			    entity.object["height"].object["HALF"].object["HI"].s16;
@@ -343,21 +335,92 @@ void EntityView::updateEntityExplorer() {
 				Entry hitbox = readVar(entity.object["hitbox"].u32, "Hitbox");
 				// Draw hitbox
 				painter.setPen(m_hitboxPen);
-				painter.drawRect(entityX - scrollX + hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
-				                 entityY - scrollY + hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
+				painter.drawRect(entityX - roomScrollX + hitbox.object["offset_x"].s8 - hitbox.object["width"].u8,
+				                 entityY - roomScrollY + hitbox.object["offset_y"].s8 - hitbox.object["height"].u8,
 				                 hitbox.object["width"].u8 * 2, hitbox.object["height"].u8 * 2);
 			} else {
 				painter.setPen(m_circlePen);
 				int circleRadius = 8;
-				painter.drawEllipse(entityX - scrollX - circleRadius, entityY - scrollY - circleRadius,
+				painter.drawEllipse(entityX - roomScrollX - circleRadius, entityY - roomScrollY - circleRadius,
 				                    circleRadius * 2, circleRadius * 2);
 			}
 			painter.setRenderHint(QPainter::Antialiasing);
 			painter.setPen(m_linePen);
-			painter.drawLine(10, 10, entityX - scrollX, entityY - scrollY);
-			painter.end();
+			painter.drawLine(10, 10, entityX - roomScrollX, entityY - roomScrollY);
 		}
 	}
+
+	// Draw tiles
+
+	int drawMap = m_ui.comboBoxMaps->currentIndex();
+	if (drawMap != 0) {
+
+		int roomOriginX = m_core->rawRead16(m_core, 0x3000bf6, -1);
+		int roomOriginY = m_core->rawRead16(m_core, 0x3000bf8, -1);
+		int xRelToRoom = roomScrollX - roomOriginX;
+		int yRelToRoom = roomScrollY - roomOriginY;
+
+		int tileBaseX = xRelToRoom >> 4;
+		int tileBaseY = yRelToRoom >> 4;
+		int offsetX = (tileBaseX << 4) - xRelToRoom;
+		int offsetY = (tileBaseY << 4) - yRelToRoom;
+
+		bool use16 = false;
+		int baseAddr = 0;
+		switch (drawMap) {
+			case 1: // collision bottom
+				baseAddr = 0x02027EB4;
+				use16 = false;
+				break;
+			case 2: // collision top
+        		baseAddr = 0x200D654;
+				use16 = false;
+				break;
+			case 3: // mapData bottom
+				baseAddr = 0x02025EB4;
+				use16 = true;
+				break;
+			case 4: // mapData top
+				baseAddr = 0x200B654;
+				use16 = true;
+				break;
+			case 5: // mapDataClone bottom
+				baseAddr = 0x02028EB4;
+				use16 = true;
+				break;
+			case 6: // mapDataClone top
+				baseAddr = 0x200E654;
+				use16 = true;
+				break;
+		}
+
+		if (use16) {
+			painter.setFont(m_smallFont);
+		} else {
+			painter.setFont(m_font);
+		}
+		if (m_ui.checkBoxInvertTextColor->isChecked()) {
+			painter.setPen(m_whitePen);
+		} else {
+			painter.setPen(m_blackPen);
+		}
+
+		for (int y = 0; y < (offsetY != 0 ? 11 : 10); y++) {
+			for (int x = 0; x < (offsetX != 0 ? 16 : 15); x++) {
+				int tile = tileBaseX + x + ((tileBaseY + y) << 6);
+				uint32_t data;
+				if (use16) {
+					data = m_core->rawRead16(m_core, baseAddr + tile*2, -1);
+				} else {
+					data = m_core->rawRead8(m_core, baseAddr + tile, -1);
+				}
+
+				painter.drawText(offsetX + (x << 4), offsetY + (y << 4) + 16, QString("%1").arg(data, 1, 16));
+			}
+		}
+	}
+
+	painter.end();
 
 	// TODO Does it make ta difference if we scale the resulting pixmap?
 	m_backing = m_backing.scaled(m_backing.size() * m_ui.spinBoxMagnification->value());

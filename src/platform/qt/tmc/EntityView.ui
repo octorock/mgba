@@ -39,7 +39,7 @@
           <bool>false</bool>
          </property>
          <widget class="QWidget" name="layoutWidget">
-          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0,0">
+          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0,0,0,0">
            <property name="sizeConstraint">
             <enum>QLayout::SetDefaultConstraint</enum>
            </property>
@@ -82,6 +82,56 @@
               <string>Show all Hitboxes</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <item>
+              <widget class="QComboBox" name="comboBoxMaps">
+               <item>
+                <property name="text">
+                 <string>None</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Collision (bottom)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Collision (top)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MapData (bottom)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MapData (top)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MapDataClone (bottom)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>MapDataClone (top)</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkBoxInvertTextColor">
+               <property name="text">
+                <string>invert</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QGBA::GameLabel" name="labelGameView">
