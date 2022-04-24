@@ -1043,17 +1043,18 @@ void EntityView::slotRightClickEntityLists(const QPoint& pos) {
 	QModelIndex index = m_ui.treeViewEntities->indexAt(pos);
 	if (index.isValid()) {
 		m_currentEntityClick = m_model.getEntity(index);
-		if (m_currentEntityClick.addr != 0 && m_currentEntityClick.kind != 9) {
+		if (m_currentEntityClick.addr != 0) {
 			QMenu menu(this);
-			menu.addAction("Set as Camera Target", this, &EntityView::slotSetAsCameraTarget);
 
 			if (m_currentEntityClick.kind != 9) {
+				menu.addAction("Set as Camera Target", this, &EntityView::slotSetAsCameraTarget);
 				// Read cutsceneBeh
 				uint sec = m_core->rawRead32(m_core, m_currentEntityClick.addr + 0x84, -1);
 				if (sec == 0x2022750 || (sec >= 0x2036570 && sec <= 0x2036570 + 32 * 36)) {
 					menu.addAction("Show Script", this, &EntityView::slotShowScriptFromEntity);
 				}
 			}
+			menu.addAction("Delete Entity", this, &EntityView::slotDeleteEntity);
 
 			menu.exec(m_ui.treeViewEntities->viewport()->mapToGlobal(pos));
 		}
@@ -1063,6 +1064,30 @@ void EntityView::slotRightClickEntityLists(const QPoint& pos) {
 void EntityView::slotSetAsCameraTarget() {
 	// gRoomControls.cameraTarget = entity.addr
 	m_core->rawWrite32(m_core, 0x3000c20, -1, m_currentEntityClick.addr);
+}
+
+void EntityView::slotDeleteEntity() {
+	// TODO does not completely clear the entity. Might have side effects!
+	/*ent->spriteSettings.draw = 0;
+	ent->collisionFlags = 0;
+	ent->contactFlags = 0;
+	ent->knockbackDuration = 0;
+	ent->health = 0;*/
+	// UnlinkEntity(ent);
+	/*if (ent == gUpdateContext.current_entity) {
+        gUpdateContext.current_entity = ent->prev;
+    }*/
+	uint32_t prev = m_core->rawRead32(m_core, m_currentEntityClick.addr, -1);
+	uint32_t next = m_core->rawRead32(m_core, m_currentEntityClick.addr + 4, -1);
+    // ent->prev->next = ent->next;
+	m_core->rawWrite32(m_core, prev + 4, -1, next);
+    //ent->next->prev = ent->prev;
+	m_core->rawWrite32(m_core, next, -1, prev);
+
+	// ent->next = NULL;
+	m_core->rawWrite32(m_core, m_currentEntityClick.addr + 4, -1, 0);
+	//ent->prev = (Entity*)0xffffffff;
+	m_core->rawWrite32(m_core, m_currentEntityClick.addr, -1, 0xffffffff);
 }
 
 //// Scripts

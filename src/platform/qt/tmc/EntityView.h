@@ -78,6 +78,7 @@ public slots:
 	void slotRightClickScriptDetails(const QPoint& pos);
 	void slotRightClickScriptList(const QPoint& pos);
 	void slotSelectClickedEntity();
+	void slotDeleteEntity();
 
 private:
 	void updateEntityLists();

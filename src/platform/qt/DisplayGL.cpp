@@ -452,8 +452,19 @@ void DisplayGL::resizeEvent(QResizeEvent* event) {
 
 void DisplayGL::resizePainter() {
 	if (m_hasStarted) {
-		QMetaObject::invokeMethod(m_painter.get(), "resize", Qt::BlockingQueuedConnection, Q_ARG(QSize, size()));
+		// Using BlockingQueuedConnection leads to freezes for me here.
+		QMetaObject::invokeMethod(m_painter.get(), "resize", Qt::QueuedConnection, Q_ARG(QSize, size()));
 	}
+}
+
+bool DisplayGL::shouldDisableUpdates() {
+	if (QGuiApplication::platformName() == "windows") {
+		return true;
+	}
+	if (QGuiApplication::platformName() == "xcb") {
+		return true;
+	}
+	return false;
 }
 
 bool DisplayGL::shouldDisableUpdates() {
