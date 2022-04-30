@@ -365,6 +365,7 @@ void EntityView::updateEntityExplorer() {
 		int offsetX = (tileBaseX << 4) - xRelToRoom;
 		int offsetY = (tileBaseY << 4) - yRelToRoom;
 
+		bool drawTileIndices = false;
 		bool use16 = false;
 		int baseAddr = 0;
 		switch (drawMap) {
@@ -392,6 +393,10 @@ void EntityView::updateEntityExplorer() {
 				baseAddr = 0x200E654;
 				use16 = true;
 				break;
+			case 7: // tile index
+				drawTileIndices = true;
+				use16 = true;
+				break;
 		}
 
 		if (use16) {
@@ -408,14 +413,18 @@ void EntityView::updateEntityExplorer() {
 		for (int y = 0; y < (offsetY != 0 ? 11 : 10); y++) {
 			for (int x = 0; x < (offsetX != 0 ? 16 : 15); x++) {
 				int tile = tileBaseX + x + ((tileBaseY + y) << 6);
-				uint32_t data;
-				if (use16) {
-					data = m_core->rawRead16(m_core, baseAddr + tile*2, -1);
+				if (drawTileIndices) {
+					painter.drawText(offsetX + (x << 4), offsetY + (y << 4) + 16, QString("%1").arg(tile, 1, 16));
 				} else {
-					data = m_core->rawRead8(m_core, baseAddr + tile, -1);
-				}
+					uint32_t data;
+					if (use16) {
+						data = m_core->rawRead16(m_core, baseAddr + tile*2, -1);
+					} else {
+						data = m_core->rawRead8(m_core, baseAddr + tile, -1);
+					}
 
-				painter.drawText(offsetX + (x << 4), offsetY + (y << 4) + 16, QString("%1").arg(data, 1, 16));
+					painter.drawText(offsetX + (x << 4), offsetY + (y << 4) + 16, QString("%1").arg(data, 1, 16));
+				}
 			}
 		}
 	}

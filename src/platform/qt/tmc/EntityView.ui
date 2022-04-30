@@ -122,6 +122,11 @@
                  <string>MapDataClone (top)</string>
                 </property>
                </item>
+               <item>
+                <property name="text">
+                 <string>Tile Index</string>
+                </property>
+               </item>
               </widget>
              </item>
              <item>
