@@ -103,7 +103,7 @@ private:
 	void setConnectedToScriptServer(bool connected);
 	void sendScriptAddr(int addr);
 
-	Ui::EntityView m_ui;
+	Ui_EntityView m_ui;
 	mCore* m_core = nullptr;
 	std::map<std::string, Definition> definitions;
 	EntityTreeModel m_model;
