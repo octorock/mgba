@@ -127,6 +127,16 @@
                  <string>Tile Index</string>
                 </property>
                </item>
+               <item>
+                <property name="text">
+                 <string>unkData3 (bottom)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>unkData3 (top)</string>
+                </property>
+               </item>
               </widget>
              </item>
              <item>

@@ -397,6 +397,14 @@ void EntityView::updateEntityExplorer() {
 				drawTileIndices = true;
 				use16 = true;
 				break;
+			case 8: // unkData3 bottom
+				baseAddr = 0x2030EB4;
+				use16 = false;
+				break;
+			case 9: // unkData3 top
+				baseAddr = 0x2016654;
+				use16 = false;
+				break;
 		}
 
 		if (use16) {
@@ -615,7 +623,7 @@ Entry EntityView::readVar(Reader& reader, const std::string& type) {
 		uint count = std::atoi(type.substr(type.find(":") + 1, type.length()).c_str());
 		return readBitfield(reader, count);
 	}
-	if (type == "u8") {
+	if (type == "u8" || type == "bool8") {
 		Entry entry;
 		entry.addr = reader.m_addr;
 		entry.type = EntryType::U8;

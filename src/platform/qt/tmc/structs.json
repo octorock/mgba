@@ -271,16 +271,10 @@
         }
       },
       "palette": {
-        "type": "union",
+        "type": "struct",
         "members": {
-          "raw": "u8",
-          "b": {
-            "type": "struct",
-            "members": {
-              "b0": "u8 : 4",
-              "b4": "u8 : 4"
-            }
-          }
+          "_0_0": "u8 : 4",
+          "_0_4": "u8 : 4"
         }
       },
       "spriteOrientation": {
@@ -297,7 +291,6 @@
       "lastFrameIndex": "u8",
       "zVelocity": "s32",
       "speed": "s16",
-      "spriteAnimation": "u8[3]",
       "spritePriority": "SpritePriority",
       "collisions": "u16",
       "x": {

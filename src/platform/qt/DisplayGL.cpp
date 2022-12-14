@@ -467,16 +467,6 @@ bool DisplayGL::shouldDisableUpdates() {
 	return false;
 }
 
-bool DisplayGL::shouldDisableUpdates() {
-	if (QGuiApplication::platformName() == "windows") {
-		return true;
-	}
-	if (QGuiApplication::platformName() == "xcb") {
-		return true;
-	}
-	return false;
-}
-
 void DisplayGL::setVideoProxy(std::shared_ptr<VideoProxy> proxy) {
 	Display::setVideoProxy(proxy);
 	if (proxy) {
