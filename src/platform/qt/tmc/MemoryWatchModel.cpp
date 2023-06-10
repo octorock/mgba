@@ -20,6 +20,7 @@ MemoryWatchModel::MemoryWatchModel(QObject* parent)
 	m_watches.append({ 0x2017660, "gSmallChests", "TileEntity[8]"});
 	m_watches.append({ 0x200B650, "gMapTop", "LayerStruct"});
 	m_watches.append({ 0x2025EB0, "gMapBottom", "LayerStruct"});
+	m_watches.append({ 0x3000F50, "gScreen", "Screen"});
 }
 
 int MemoryWatchModel::rowCount(const QModelIndex& parent) const {

@@ -14,8 +14,8 @@ void GameLabel::keyPressEvent(QKeyEvent* event) {
 		QWidget::keyPressEvent(event);
 		return;
 	}
-	GBAKey key = m_controller->m_inputController->mapKeyboard(event->key());
-	if (key == GBA_KEY_NONE) {
+	int key = m_controller->m_inputController->mapKeyboard(event->key());
+	if (key == -1) {
 		QWidget::keyPressEvent(event);
 		return;
 	}
@@ -30,8 +30,8 @@ void GameLabel::keyReleaseEvent(QKeyEvent* event) {
 		QWidget::keyReleaseEvent(event);
 		return;
 	}
-	GBAKey key = m_controller->m_inputController->mapKeyboard(event->key());
-	if (key == GBA_KEY_NONE) {
+	int key = m_controller->m_inputController->mapKeyboard(event->key());
+	if (key == -1) {
 		QWidget::keyPressEvent(event);
 		return;
 	}
